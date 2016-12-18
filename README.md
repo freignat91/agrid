@@ -1,3 +1,47 @@
 # AGRID
 
-Buid
+Agrid v0.1.0 experimental
+
+# Purpose
+
+Agrid is a high available file storage design to be easy to use and scale. Agrid can handle from 1 to several hundred storage nodes. Each file are cut and spread on nodes to be stored.
+
+Agrid is a docker service. It enough to pull its image or build it user `make build` create the docker service to use it on a swarm cluster. It can be scale using docker service scale command.
+
+Agrid use grpc protocol for communication between nodes and between nodes and client. Under 20 nodes, all nodes are completly connected one to eachother, up to 20 nodes agrid create a grid and communication between nodes are not direct anymore. 
+
+Agrid use Ant like behavior to found the shortest path between two nodes. The path are dynamically adapted regarding the nodes workload to stay the shortest in term of time. The grid become more efficiente while it is used. see: ./docs/Agrid-grid-building.pptx
+
+
+# Configuration using System Variables:
+
+
+- GRPCPORT:               grpc server port used by nodes
+- NB_DUPLICATE:           number of time a file is replication in the cluster when it is stored.
+- NB_DUPLICATE_ACK:       number of acknoledged replications before concidering a file stored and acknoledge the client
+
+
+# Install
+
+
+- Docker 1.12.3 should be installed 
+- clone this project
+- execute `make build` to create a image freignat91/agrid:latest
+- start the service: `make start` to create a agrid using 5 nodes (change make start to exectue direclty the docker create service command to modify startup parameters)
+
+
+# CLI
+
+
+- agrid file store [source file pathname] [file pathname in the cluster]
+- agrid file get [file pathname in the cluster] [file pathname to write]
+- agrid file ls [path]
+- agrid file rm [pathname]
+- agrid node ls
+- agrid node ping
+
+## License
+
+Agrid is licensed under the Apache License, Version 2.0. See https://github.com/freignat91/agrid/LICENSE
+for the full license text.
+

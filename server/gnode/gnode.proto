@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package gnode;
+
+service GNodeService {
+        rpc ExecuteFunction (AntMes) returns (AntRet);
+        rpc GetClientStream (stream AntMes) returns (stream AntMes) {}
+        rpc AskConnection (AskConnectionRequest) returns (PingRet) {}
+        rpc Ping (AntMes) returns (PingRet) {}
+        rpc SendFile(SendFileRequest) returns (SendFileRet) {}
+        rpc GetFile(GetFileRequest) returns (GetFileRet) {}
+}
+
+message AntMes {
+        string id = 1;
+        string origin = 2;
+        string from_client = 3;
+        string target = 4;
+        bool isAnswer = 5;
+        bool return_answer = 6;
+        bool is_path_writer = 7;
+        string origin_id = 8;
+        repeated string path = 9;
+        int32 path_index = 10;
+        string function = 11;
+        repeated string args = 12;
+        string transfer_id = 13;
+        int64 order = 14;
+        int64 nb_block = 15;
+        int32 replicas = 16;
+        int64 size = 17;
+        string targeted_path = 18;
+        bool no_blocking = 19;
+        bool debug = 20;
+        bytes data = 21;
+}
+
+message AntRet{
+        bool ack = 1;
+        string id = 2;
+}
+
+message PingRet{
+        string host = 1;
+        string name = 2;
+        int32 nb_node = 3;
+        int32 client_number = 4;
+}
+
+message AskConnectionRequest{
+        string name = 1;
+        string host = 2;
+        string ip = 3;
+}
+
+message SendFileRequest{
+        string client_id = 1;
+        string name = 2;
+        string path = 3;
+        int64 nb_block = 4;
+        int64 blockSize = 5;
+        string transfer_id = 6;
+        string key = 7;
+        repeated string metadata = 8;
+}
+
+message SendFileRet{
+        string transfer_id = 1;
+        int64 block_size = 2;
+}
+
+message EmptyRet{
+        
+}
+
+message GetFileRequest{
+        string client_id = 1;
+        string name = 2;
+}
+
+message GetFileRet{
+        string transfer_id = 1;
+        int64 block_size = 2;
+}
+

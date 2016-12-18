@@ -1,0 +1,45 @@
+hash: b74ba911b813266bfd088c84ab5b6d91a8081efe87f3198b0eb6755e271b0747
+updated: 2016-12-12T15:07:24.495443744+01:00
+imports:
+- name: github.com/fatih/color
+  version: dea9d3a26a087187530244679c1cfb3a42937794
+- name: github.com/golang/protobuf
+  version: 8616e8ee5e20a1704615e6c8d7afcdac06087a67
+  subpackages:
+  - proto
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/mattn/go-colorable
+  version: d228849504861217f796da67fae4f6e347643f15
+- name: github.com/mattn/go-isatty
+  version: 30a891c33c7cde7b02a981314b4228ec99380cca
+- name: github.com/spf13/cobra
+  version: 9495bc009a56819bdb0ddbc1a373e29c140bc674
+- name: github.com/spf13/pflag
+  version: 5ccb023bc27df288a957c5e994cd44fd19619465
+- name: golang.org/x/net
+  version: 6acef71eb69611914f7a30939ea9f6e194c78172
+  subpackages:
+  - context
+  - http2
+  - http2/hpack
+  - internal/timeseries
+  - trace
+- name: golang.org/x/sys
+  version: 30237cf4eefd639b184d1f2cb77a581ea0be8947
+  subpackages:
+  - unix
+- name: google.golang.org/grpc
+  version: 708a7f9f3283aa2d4f6132d287d78683babe55c8
+  subpackages:
+  - codes
+  - credentials
+  - grpclog
+  - internal
+  - metadata
+  - naming
+  - peer
+  - stats
+  - tap
+  - transport
+testImports: []
