@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
 	"time"
 )
@@ -32,12 +31,6 @@ func (m *ClientManager) fileGet(cmd *cobra.Command, args []string) error {
 	localFile := args[1]
 	m.pInfo("Execute: get file: %s to %d\n", clusterFile, localFile)
 	key := cmd.Flag("key").Value.String()
-	if key != "" {
-		for len(key) < 32 {
-			key = fmt.Sprintf("%s%s", key, key)
-		}
-		key = key[0:32]
-	}
 	t0 := time.Now()
 	fileManager := fileManager{}
 	fileManager.init(m)

@@ -1,4 +1,4 @@
-package gnode
+package main
 
 import (
 	"crypto/aes"

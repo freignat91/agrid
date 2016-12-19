@@ -35,7 +35,6 @@ type FileTransfer struct {
 	terminated    bool
 	blockSize     int64
 	metadata      []string
-	cipher        *gCipher
 }
 
 func (f *FileManager) init(gnode *GNode) {
@@ -57,14 +56,6 @@ func (f *FileManager) sendFile(req *SendFileRequest) (*SendFileRet, error) {
 		lastClientMes: time.Now(),
 		metadata:      req.Metadata,
 	}
-	if req.Key != "" {
-		logf.info("Encrypted transfer id=%d\n", transfer.id)
-		transfer.cipher = &gCipher{}
-		if err := transfer.cipher.init([]byte(req.Key)); err != nil {
-			logf.error("Cipher init error: %v\n", err)
-			transfer.cipher = nil
-		}
-	}
 	f.transferMap[req.TransferId] = transfer
 	logf.info("sendFile received: req=%+v\n", req)
 	return &SendFileRet{}, nil
@@ -83,13 +74,6 @@ func (f *FileManager) receiveBlocFromClient(mes *AntMes) error {
 		}
 	}
 	data := mes.Data
-	if transfer.cipher != nil {
-		dat, err := transfer.cipher.encrypt(mes.Data)
-		if err != nil {
-			return err
-		}
-		data = dat
-	}
 	for nn := 0; nn < config.nbDuplicate; nn++ {
 		block := &AntMes{
 			Target:       f.gnode.nodeNameList[pos],

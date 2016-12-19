@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/fatih/color"
 	"os"
 )
@@ -102,4 +103,14 @@ func (m *ClientManager) setColors() {
 		m.printColor[5] = color.New(color.FgHiBlack)
 	}
 	//add theme as you want.
+}
+
+func (m *ClientManager) formatKey(key string) string {
+	if key != "" {
+		for len(key) < 32 {
+			key = fmt.Sprintf("%s%s", key, key)
+		}
+		key = key[0:32]
+	}
+	return key
 }

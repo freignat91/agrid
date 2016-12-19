@@ -15,6 +15,7 @@ type fileManager struct {
 	nbFile        int
 	clients       []*gnodeClient
 	currentClient int
+	cipher        *gCipher
 }
 
 func (m *fileManager) init(clientManager *ClientManager) {
@@ -23,6 +24,7 @@ func (m *fileManager) init(clientManager *ClientManager) {
 }
 
 func (m *fileManager) send(fileName string, target string, meta []string, bSize int64, nbThread int, key string) error {
+	key = m.clientManager.formatKey(key)
 	t0 := time.Now()
 	f, err := os.Open(fileName)
 	if err != nil {
@@ -45,6 +47,16 @@ func (m *fileManager) send(fileName string, target string, meta []string, bSize 
 		totalBlock++
 	}
 	transferIds := []string{}
+
+	if key != "" {
+		m.clientManager.pInfo("Encrypted transfer\n")
+		m.cipher = &gCipher{}
+		if err := m.cipher.init([]byte(key)); err != nil {
+			m.clientManager.pError("Cipher init error: %v\n", err)
+			m.cipher = nil
+		}
+	}
+
 	for i, client := range m.clients {
 		nbBlock := totalBlock / int64(nbThread)
 		if totalBlock%int64(nbThread) >= int64(i+1) {
@@ -88,6 +100,13 @@ func (m *fileManager) send(fileName string, target string, meta []string, bSize 
 			return err
 		}
 		block.Data = block.Data[:n]
+		if m.cipher != nil {
+			dat, err := m.cipher.encrypt(block.Data)
+			if err != nil {
+				return err
+			}
+			block.Data = dat
+		}
 		block.Size = int64(n)
 		block.Order++
 		client := m.getNextClient()
@@ -157,6 +176,7 @@ func (m *fileManager) get(clusterFile string, localFile string, key string) erro
 }
 
 func (m *fileManager) receiveFile(client *gnodeClient, localFile string, key string) error {
+	key = m.clientManager.formatKey(key)
 	file, err := os.Create(localFile)
 	if err != nil {
 		return err
@@ -169,12 +189,28 @@ func (m *fileManager) receiveFile(client *gnodeClient, localFile string, key str
 		m.clientManager.pError("get file timeout\n")
 		os.Exit(1)
 	})
+	if key != "" {
+		m.clientManager.pInfo("Encrypted transfer\n")
+		m.cipher = &gCipher{}
+		if err := m.cipher.init([]byte(key)); err != nil {
+			m.clientManager.pError("Cipher init error: %v\n", err)
+			m.cipher = nil
+		}
+	}
+
 	for {
 		mes, _ := client.getNextAnswer(0)
 		m.clientManager.pInfo("received mes %d/%d (%d)\n", mes.Order, mes.NbBlock, len(orderMap))
 		if nbBlock == 0 {
 			nbBlock = mes.NbBlock
 			//fmt.Printf("nbBlock set to %d\n", mes.NbBlock)
+		}
+		if m.cipher != nil {
+			dat, err := m.cipher.decrypt(mes.Data)
+			if err != nil {
+				return err
+			}
+			mes.Data = dat
 		}
 		if _, err := file.Seek((mes.Order-1)*blockSize, 0); err != nil {
 			return err
