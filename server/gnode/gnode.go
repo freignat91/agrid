@@ -10,14 +10,9 @@ import (
 	"time"
 )
 
-//TODO; verifier le foncitonnement des traces (2x ping)
 //TODO: limit idMap size
-//TODO: file transfer
-//TODO: target finder
 //TODO: ramasse miette sur les objet transfer non terminé apres moult
 //TODO: utiliser le client mes return pour afficher % storage
-//TODO: traiter le cas des fichiers avec . dans leur nom et finissant par .fg
-//TODO faire marcher avec 1 node
 
 var (
 	config GNodeConfig     = GNodeConfig{}
