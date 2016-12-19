@@ -10,21 +10,24 @@ Agrid is a docker service. It enough to pull its image or build it user `make bu
 
 Agrid use grpc protocol for communication between nodes and between nodes and client. Under 20 nodes, all nodes are completly connected one to eachother, up to 20 nodes agrid create a grid and communication between nodes are not direct anymore. 
 
-Agrid use Ant like behavior to found the shortest path between two nodes. The path are dynamically adapted regarding the nodes workload to stay the shortest in term of time. The grid become more efficiente while it is used. see: ./docs/Agrid-grid-building.pptx
+Agrid use Ant like behavior to found the shortest path between two nodes. The path are dynamically adapted regarding the nodes workload to stay the shortest in term of time. The grid become more efficiente while it is used. see: 
+
+- ./docs/Agrid-grid-building.pptx
+- ./docs/Agrid-Ant-net.pptx
 
 
 # Configuration using System Variables:
 
 
 - GRPCPORT:               grpc server port used by nodes
-- NB_DUPLICATE:           number of time a file is replication in the cluster when it is stored.
-- NB_DUPLICATE_ACK:       number of acknoledged replications before concidering a file stored and acknoledge the client
+- NB_DUPLICATE:           number of time a file is replicated in the cluster when it is stored.
+- NB_DUPLICATE_ACK:       number of acknoledged replications before a file is concidered stored and acknoledge the client
 
 
 # Install
 
 
-- Docker 1.12.3 should be installed 
+- Docker 1.12.3 min should be installed 
 - clone this project
 - execute `make build` to create a image freignat91/agrid:latest
 - start the service: `make start` to create a agrid using 5 nodes (change make start to exectue direclty the docker create service command to modify startup parameters)
