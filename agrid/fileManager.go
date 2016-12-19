@@ -23,7 +23,7 @@ func (m *fileManager) init(clientManager *ClientManager) {
 	m.currentClient = 0
 }
 
-func (m *fileManager) send(fileName string, target string, meta []string, bSize int64, nbThread int, key string) error {
+func (m *fileManager) send(fileName string, target string, meta []string, nbThread int, key string) error {
 	key = m.clientManager.formatKey(key)
 	t0 := time.Now()
 	f, err := os.Open(fileName)
@@ -41,7 +41,7 @@ func (m *fileManager) send(fileName string, target string, meta []string, bSize 
 	md5 := md5.New()
 	io.WriteString(md5, fileName)
 	tId := fmt.Sprintf("TF-%x-%d", md5.Sum(nil), time.Now().UnixNano())
-	blockSize := bSize * 1024
+	blockSize := int64(gnode.GNodeBlockSize) * 1024
 	totalBlock := length / blockSize
 	if length%blockSize > 0 {
 		totalBlock++

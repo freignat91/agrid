@@ -36,10 +36,10 @@ Agrid use Ant like behavior to found the shortest path between two nodes. The pa
 # CLI
 
 
-- agrid file store [source file pathname] [file pathname in the cluster]
-- agrid file get [file pathname in the cluster] [file pathname to write]
+- agrid file store [source file pathname] [file pathname in the cluster] <--thread> <--key>
+- agrid file get [file pathname in the cluster] [file pathname to write] <--thread>
 - agrid file ls [path]
-- agrid file rm [pathname]
+- agrid file rm [pathname] <-r>
 - agrid node ls
 - agrid node ping
 
