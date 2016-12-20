@@ -350,3 +350,7 @@ func (f *FileManager) receivedBackBlock(mes *AntMes) error {
 	}
 	return nil
 }
+
+func (f *FileManager) moveRandomBlock() {
+	//TODO
+}

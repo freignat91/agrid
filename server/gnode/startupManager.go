@@ -115,6 +115,7 @@ func (g *gnodeLeader) waitReady() error {
 	for !g.gnode.healthy {
 		time.Sleep(3 * time.Second)
 	}
+	g.gnode.startReorganizer()
 	return nil
 }
 

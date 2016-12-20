@@ -8,9 +8,9 @@ Agrid is a high available file storage design to be easy to use and scale. Agrid
 
 Agrid is a docker service. It enough to pull its image or build it using `make build` and create the docker service to use it on a swarm cluster. It can be scale using docker service scale command.
 
-Agrid uses grpc protocol for communication between nodes and between nodes and clients. Under 20 nodes, all nodes are completly connected one to eachother, up to 20 nodes agrid create a grid and the communication between nodes are not direct anymore. 
+Agrid uses grpc protocol for communication between nodes and between nodes and clients. Under 20 nodes, all nodes are completely connected one to each other, up to 20 nodes Agrid create a grid and the communication between nodes are not direct anymore. 
 
-Agrid use Ant like behavior to found the shortest path between two nodes. The path are dynamically adapted regarding the nodes workload to stay the shortest in term of time. The grid become more efficiente while it is used. see: 
+Agrid use Ant like behavior to found the shortest path between two nodes. The path are dynamically adapted regarding the nodes workload to stay the shortest in term of time. The grid become more efficient while it is used. see: 
 
 - ./docs/Agrid-grid-building.pptx
 - ./docs/Agrid-Ant-net.pptx
@@ -20,8 +20,14 @@ Agrid use Ant like behavior to found the shortest path between two nodes. The pa
 
 
 - GRPCPORT:               grpc server port used by nodes
-- NB_DUPLICATE:           number of time a file is replicated in the cluster when it is stored.
-- NB_DUPLICATE_ACK:       number of acknoledged replications before a file is concidered stored and acknoledge the client
+- NB_DUPLICATE:           number of time a file is replicated in the cluster when it is stored: default 3
+- NB_DUPLICATE_ACK:       number of acknowledge replications before a file is considered stored and acknowledge the client: default 1
+- NB_LINE_CONNECT:        number of "line" type connection in grid: default 0 means computed automatically
+- NB_CROSS_CONNECT:       number of "cross" type connection in grid: default 0 means computed automatically
+- BUFFER_SIZE:            messages waiting to be treated buffer size: default 10000
+- PARALLEL_SENDER:        maximum number of messages to be sent treated in parallel: default 100
+- PARALLEL_RECEIVER:      maximum number of received messages treated in parallel: default 100
+- DATA_PATH:              path in container where file data is stored: default: /data (should be mapped on host using mount docker argument (--mount type=bind,source=/[hostpath],target=/data)
 
 
 # Install
@@ -29,19 +35,95 @@ Agrid use Ant like behavior to found the shortest path between two nodes. The pa
 
 - Docker 1.12.3 min should be installed 
 - clone this project
+- execute `make install` to build the agrid command line executable
 - execute `make build` to create a image freignat91/agrid:latest
-- start the service: `make start` to create a service agrid using 5 nodes (change make start to exectue direclty the docker create service command to modify startup parameters)
+- start the service: `make start` to create a service agrid using 5 nodes (change make start to execute directly the docker create service command to modify startup parameters)
+
+for instance with 5 nodes, using a publish port 30103 and network aNetwork
+
+```
+docker service create --network aNetwork --name agrid \
+        --publish 30103:30103 \
+        --mount type=bind,source=/home/freignat/data,target=/data \
+        --replicas=5 \
+        freignat91/agrid:latest
+```
+
+# Resilience
+
+For resilience reason, it's better to have a separated disk file system for each node (each node on its own VM), but for test reason it's possible to use nodes on the same file system or have architecture with several nodes on several VMs.
+
+## Node crash
+
+If a node crash (agrid itself, or disk file system failure or VM failure), docker will restart the node. When the new node restart, it will try to get it's previous file system or ask the other nodes to resend the blocks he handles (this last part is targeted for 0.1.1 version)
+
+From time to time, Agrid reorganizes the file block locations, verifying this way they are still readable and rewrites them from copies if is not the case (targeted for 0.1.1 version)
+
+## Scale out
+
+To scale out the number of nodes, it's enough to use `docker service scale agrid=xxx` command. Agrid will recompute its grid recreating all the node connections accordingly to the number of nodes
+
+## Scale in
+
+To scale in the number of nodes, it's enough to use `docker service scale agrid=xxx` command. Agrid will recompute its grid recreating all the node connections accordingly to the number of nodes. Warning, to do not lose files, it's important to scale in with a difference between the number of nodes lower than the NB_DUPLICATE parameter and let time to Agrid to reorganize the files blocks between each scale command
+
+## Grid simulation
+
+To simulate nodes connections using different parameters as, node number, line connections, cross connections, use the cli command:
+
+`agrid grid simul [nodes] <--line> <--cross>`
+- [nodes] the number of nodes
+- <--line> optionally: the number of line connections 
+- <--cross> optionally: the number of cross connections 
+
+this command as not effect on the real cluster grid connections
+
+
+# Users (targeted for version 0.1.1)
+ 
+Agrid can share its storage between users. Each user got a home folder to store exclusively its own files and an optional token to authenticate onto the server.
 
 
 # CLI
 
 
-- agrid file store [source file pathname] [file pathname in the cluster] <--thread> <--key>
-- agrid file get [file pathname in the cluster] [file pathname to write] <--thread>
-- agrid file ls [path]
-- agrid file rm [pathname] <-r>
-- agrid node ls
-- agrid node ping
+### store a file on cluster:
+
+`agrid file store [source] [target] <--thread> <--key>`
+- [source]: the full pathname of the local file to store
+- [target]: the full pathname of the file in the cluster
+- <--thread>: optionally: number of threads used to store the file (default 1), each thread open a grpc connection on a distinct node.
+- <--key>: optionally: AES key to encrypt the file
+
+
+### get a file from cluster
+
+`agrid file get [source] [target] <--key>`
+- [source]: the full pathname of the file to get in cluster
+- [target]: the full pathname of the file to write locally
+- <--key>: optionally: AES key to encrypt the file
+
+
+### list the files on the cluster
+
+`agrid file ls [path]`
+- [path]: path name on the cluster to list, default /
+
+
+### remove a file on the cluster
+
+`agrid file rm [pathname] <-r>`
+[pathname]: full pathname of the file to remove on the cluster
+<-r>: to remove a folder recursively
+
+### list the cluster nodes
+
+`agrid node ls`
+
+### ping a cluster node
+
+`agrid node ping |node]`
+- [node] the node name to ping
 
 
 ## License

@@ -37,7 +37,7 @@ func (cfg *GNodeConfig) setDefault() {
 	cfg.restPort = "3000"
 	cfg.grpcPort = "30103"
 	cfg.udpPort = "3010"
-	cfg.bufferSize = 30000
+	cfg.bufferSize = 10000
 	cfg.parallelReceiver = 100
 	cfg.parallelSender = 100
 	cfg.nbDuplicate = 1
@@ -48,8 +48,8 @@ func (cfg *GNodeConfig) setDefault() {
 
 //Update config with env variables
 func (cfg *GNodeConfig) loadConfigUsingEnvVariable() {
-	cfg.nbLineConnect = cfg.getIntParameter("NB_CONNECT", cfg.nbLineConnect)
-	cfg.nbCrossConnect = cfg.getIntParameter("NB_MORE", cfg.nbCrossConnect)
+	cfg.nbLineConnect = cfg.getIntParameter("NB_LINE_CONNECT", cfg.nbLineConnect)
+	cfg.nbCrossConnect = cfg.getIntParameter("NB_CROSS_CONNECT", cfg.nbCrossConnect)
 	cfg.restPort = cfg.getStringParameter("REST_PORT", cfg.restPort)
 	cfg.grpcPort = cfg.getStringParameter("GRPC_PORT", cfg.grpcPort)
 	cfg.udpPort = cfg.getStringParameter("UDP_PORT", cfg.udpPort)

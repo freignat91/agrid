@@ -76,6 +76,8 @@ message EmptyRet{
 message GetFileRequest{
         string client_id = 1;
         string name = 2;
+        int32 nbThread = 3;
+        int32 thread = 4;
 }
 
 message GetFileRet{

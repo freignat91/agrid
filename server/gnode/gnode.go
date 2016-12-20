@@ -249,3 +249,12 @@ func (g *GNode) sendBackClient(clientId string, mes *AntMes) {
 	}
 
 }
+
+func (g *GNode) startReorganizer() {
+	go func() {
+		for {
+			time.Sleep(30 * time.Second)
+			g.fileManager.moveRandomBlock()
+		}
+	}()
+}
