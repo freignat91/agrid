@@ -32,9 +32,9 @@ func (m *ClientManager) fileGet(cmd *cobra.Command, args []string) error {
 	m.pInfo("Execute: get file: %s to %d\n", clusterFile, localFile)
 	key := cmd.Flag("key").Value.String()
 	t0 := time.Now()
-	fileManager := fileManager{}
-	fileManager.init(m)
-	if err := fileManager.get(clusterFile, localFile, key); err != nil {
+	fileReceiver := fileReceiver{}
+	fileReceiver.init(m)
+	if err := fileReceiver.get(clusterFile, localFile, key); err != nil {
 		return err
 	}
 	m.pSuccess("file %s received (%dms)\n", localFile, time.Now().Sub(t0).Nanoseconds()/1000000)

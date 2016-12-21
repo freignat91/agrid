@@ -47,9 +47,9 @@ func (m *ClientManager) fileStore(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		m.Fatal("Error option --thread is not a number: %s", cmd.Flag("thread").Value.String())
 	}
-	fileManager := fileManager{}
-	fileManager.init(m)
-	if err := fileManager.send(fileName, targetedPath, meta, nbThread, key); err != nil {
+	fileSender := fileSender{}
+	fileSender.init(m)
+	if err := fileSender.send(fileName, targetedPath, meta, nbThread, key); err != nil {
 		return err
 	}
 	return nil
