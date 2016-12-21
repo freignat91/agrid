@@ -4,10 +4,10 @@ import ()
 
 // build vars
 var (
-	Version       string
-	Build         string
-	clientManager = &ClientManager{}
-	config        = &ClientConfig{}
+	Version  string
+	Build    string
+	agridCli = &agridCLI{}
+	config   = &CliConfig{}
 )
 
 func main() {

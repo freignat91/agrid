@@ -138,6 +138,7 @@ func (r *MessageReceiver) sendAnswer(mes *AntMes, ret []reflect.Value) error {
 		Function:     mes.Function,
 		Debug:        mes.Debug,
 		IsPathWriter: mes.IsPathWriter,
+		AnswerWait:   mes.AnswerWait,
 		Args:         args,
 	}
 	if retMes.Target == r.gnode.name {
@@ -153,17 +154,24 @@ func (r *MessageReceiver) receiveAnswer(mes *AntMes) {
 	if mes.IsPathWriter {
 		r.updateTrace(mes)
 	}
-	if mes.FromClient != "" {
-		if client, ok := r.gnode.clientMap[mes.FromClient]; ok {
-			if err := client.stream.Send(mes); err != nil {
-				logf.error("Send back answer to client error: %v\n", err)
-				return
+	if mes.Target == r.gnode.name {
+		logf.debugMes(mes, "answer reached its target: %v\n", mes.Id)
+		if mes.FromClient != "" {
+			if client, ok := r.gnode.clientMap[mes.FromClient]; ok {
+				if err := client.stream.Send(mes); err != nil {
+					logf.error("Send back answer to client error: %v\n", err)
+					return
+				}
+				logf.debugMes(mes, "answer id %s sent back to client %s\n", mes.Id, client.name)
+			} else {
+				logf.debugMes(mes, "answer id %s sent back, client %s not found\n", mes.Id, mes.FromClient)
 			}
-			logf.debugMes(mes, "answer id %s sent back to client %s\n", mes.Id, client.name)
-		} else {
-			logf.debugMes(mes, "answer id %s sent back, client %s not found\n", mes.Id, mes.FromClient)
 		}
-		return
+		if mes.AnswerWait {
+			logf.info("answer originId=%s saved in receiveMap\n", mes.OriginId)
+			r.receiverManager.answerMap[mes.OriginId] = mes
+			r.receiverManager.getChan <- mes.OriginId
+		}
 	}
 }
 

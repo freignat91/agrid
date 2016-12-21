@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"github.com/freignat91/agrid/agridapi"
 	"github.com/spf13/cobra"
 	"time"
 )
@@ -11,8 +13,8 @@ var NodePingCmd = &cobra.Command{
 	Short: "ping  an agrid node",
 	Long:  `ping an agrid node`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := clientManager.ping(cmd, args); err != nil {
-			clientManager.Fatal("Error: %v\n", err)
+		if err := agridCli.ping(cmd, args); err != nil {
+			agridCli.Fatal("Error: %v\n", err)
 		}
 	},
 }
@@ -21,19 +23,19 @@ func init() {
 	NodeCmd.AddCommand(NodePingCmd)
 }
 
-func (m *ClientManager) ping(cmd *cobra.Command, args []string) error {
-	m.pInfo("Execute: ping %s\n", args[0])
-	t0 := time.Now()
-	client, err := m.getClient()
-	if err != nil {
-		return err
+func (m *agridCLI) ping(cmd *cobra.Command, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("Needs node name as first argument")
 	}
-	mes, err := client.createSendMessage(args[0], true, "ping", "client")
+	node := args[0]
+	m.pInfo("Execute: ping %s\n", node)
+	t0 := time.Now()
+	api := agridapi.New(config.serverAddress)
+	path, err := api.NodePing(node, false)
 	if err != nil {
 		return err
 	}
 	t1 := time.Now()
-	mes.Path = append(mes.Path, args[0])
-	m.pSuccess("Ping time=%d ms path: %v\n", t1.Sub(t0).Nanoseconds()/1000000, mes.Path)
+	m.pSuccess("Ping time=%d ms path: %s\n", t1.Sub(t0).Nanoseconds()/1000000, path)
 	return nil
 }

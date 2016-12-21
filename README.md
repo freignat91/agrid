@@ -1,6 +1,6 @@
 # AGRID
 
-Agrid v0.1.0 experimental
+Agrid v0.1.1 experimental
 
 # Purpose
 
@@ -55,7 +55,7 @@ For resilience reason, it's better to have a separated disk file system for each
 
 ## Node crash
 
-If a node crash (agrid itself, or disk file system failure or VM failure), docker will restart the node. When the new node restart, it will try to get it's previous file system or ask the other nodes to resend the blocks he handles (this last part is targeted for 0.1.1 version)
+If a node crash (agrid itself, or disk file system failure or VM failure), docker will restart the node. When the new node restart, it will try to get it's previous file system or ask the other nodes to resend the blocks he handles (this last part is targeted for 0.1.2 version)
 
 From time to time, Agrid reorganizes the file block locations, verifying this way they are still readable and rewrites them from copies if is not the case (targeted for 0.1.1 version)
 
@@ -79,7 +79,7 @@ To simulate nodes connections using different parameters as, node number, line c
 this command as not effect on the real cluster grid connections
 
 
-# Users (targeted for version 0.1.1)
+# Users (targeted for version 0.1.2)
  
 Agrid can share its storage between users. Each user got a home folder to store exclusively its own files and an optional token to authenticate onto the server.
 
@@ -124,6 +124,76 @@ Agrid can share its storage between users. Each user got a home folder to store 
 
 `agrid node ping |node]`
 - [node] the node name to ping
+
+# API
+
+Agrid is usable using Go api API github.com/freignat91/agrid/agridapi
+
+### Usage
+
+```
+        import "github.com/freignat91/agrid/agridapi"
+        ...
+        api := agridapi.New("localhost:10315")
+        err, fileList := api.FileLs("/")
+        ...
+```
+
+### func (api *AgridAPI) FileLs(folder string) ([]string, error)
+
+List the file stored on the cluster
+Argument:
+- folder: Folder under which the files are listed
+
+### func (api *AgridAPI) FileStore(localFile string, clusterPathname string, meta *[]string, nbThread int, key string) error 
+
+Store a file on the cluster
+Arguments:
+- localFile: pathname of the local file to store
+- clusterPathName: pathname of the file on the cluster
+- metadata associated to the file and stored with the file
+- nbThread: number of threads used to store the file (each thread open a distinc grpc connection)
+- key: AES key to encrypt the file on the cluster 
+
+### func (api *AgridAPI) FileGet(clusterPathname string, localFile string, key string) error
+
+Get a file from the cluster
+Arguments:
+- clusterPathname: pathname of the file to get on the cluster
+- localFile: pathname of the file to write locally
+- key: AES key to decrypt the file
+
+### func (api *AgridAPI) FileRm(clusterPathname string, recursive bool) (error, bool) 
+
+Remove a file on the cluster
+Arguments:
+- clusterPathname: pathname of the file to remove on the cluster
+- recusive: if true remove all files under the clusterPathname
+
+### func (api *AgridAPI) NodePing(node string, debugTrace bool) (string, error)
+
+Ping a node
+Arguments:
+- node: node name to ping
+- debugTrace: if true, trace the message especially in the node logs.
+
+### func (api *AgridAPI) NodePingFromTo(node1 string, node2 string, debugTrace bool) (string, error)
+Ping a node from another node
+Arguments:
+- node1: node name of the node which execute the ping
+- node2: targetted node name
+- debugTrace: if true, trace the message especially in the node logs.
+
+### func (api *AgridAPI) NodeSetLogLevel(node string, logLevel string) error
+
+Set the logLevel on a node(s)
+Arguments:
+- node: targetted node
+- logLevel: error, warn, info, debug
+
+### func (api *AgridAPI) NodeLs() ([]string, error)
+
+List the node of the cluster
 
 
 ## License

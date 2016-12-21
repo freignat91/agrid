@@ -12,8 +12,8 @@ var GridSimulCmd = &cobra.Command{
 	Short: "grid simulation",
 	Long:  `grid connections simulation and stats`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := clientManager.gridSimul(cmd, args); err != nil {
-			clientManager.Fatal("Error: %v\n", err)
+		if err := agridCli.gridSimul(cmd, args); err != nil {
+			agridCli.Fatal("Error: %v\n", err)
 		}
 	},
 }
@@ -24,7 +24,7 @@ func init() {
 	GridSimulCmd.Flags().Int("cross", 0, `number of cross connections`)
 }
 
-func (m *ClientManager) gridSimul(cmd *cobra.Command, args []string) error {
+func (m *agridCLI) gridSimul(cmd *cobra.Command, args []string) error {
 	if len(args) < 1 {
 		m.Fatal("First argument should be a node number\n")
 	}

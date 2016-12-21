@@ -32,7 +32,8 @@ message AntMes {
         string targeted_path = 18;
         bool no_blocking = 19;
         bool debug = 20;
-        bytes data = 21;
+        bool answer_wait = 21;
+        bytes data = 22;
 }
 
 message AntRet{

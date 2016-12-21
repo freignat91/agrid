@@ -203,11 +203,6 @@ func (g *GNode) displayConnection() {
 	logf.printf("---------------------------------------------------------------------------------------\n")
 }
 
-func (g *GNode) pingAll() {
-	mes := CreateMessage("*", true, "ping", g.name)
-	g.senderManager.sendMessage(mes)
-}
-
 // Connect to server
 func (g *GNode) startGRPCClient(ip net.IP) (*grpc.ClientConn, error) {
 	return grpc.Dial(fmt.Sprintf("%s:%s", ip.String(), config.grpcPort),

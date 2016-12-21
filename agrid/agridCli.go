@@ -1,12 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"github.com/fatih/color"
 	"os"
 )
 
-type ClientManager struct {
+type agridCLI struct {
 	printColor [6]*color.Color
 	server     string
 	verbose    bool
@@ -24,22 +23,13 @@ var (
 	colDebug   = 5
 )
 
-func (m *ClientManager) init() error {
+func (m *agridCLI) init() error {
 	m.setColors()
 	//
 	return nil
 }
 
-func (m *ClientManager) getClient() (*gnodeClient, error) {
-	client := gnodeClient{}
-	err := client.init(m)
-	if err != nil {
-		return nil, err
-	}
-	return &client, nil
-}
-
-func (m *ClientManager) printf(col int, format string, args ...interface{}) {
+func (m *agridCLI) printf(col int, format string, args ...interface{}) {
 	if m.silence {
 		return
 	}
@@ -56,36 +46,36 @@ func (m *ClientManager) printf(col int, format string, args ...interface{}) {
 	colorp.Printf(format, args...)
 }
 
-func (m *ClientManager) Fatal(format string, args ...interface{}) {
+func (m *agridCLI) Fatal(format string, args ...interface{}) {
 	m.printf(colError, format, args...)
 	os.Exit(1)
 }
 
-func (m *ClientManager) pError(format string, args ...interface{}) {
+func (m *agridCLI) pError(format string, args ...interface{}) {
 	m.printf(colError, format, args...)
 }
 
-func (m *ClientManager) pWarn(format string, args ...interface{}) {
+func (m *agridCLI) pWarn(format string, args ...interface{}) {
 	m.printf(colWarn, format, args...)
 }
 
-func (m *ClientManager) pInfo(format string, args ...interface{}) {
+func (m *agridCLI) pInfo(format string, args ...interface{}) {
 	m.printf(colInfo, format, args...)
 }
 
-func (m *ClientManager) pSuccess(format string, args ...interface{}) {
+func (m *agridCLI) pSuccess(format string, args ...interface{}) {
 	m.printf(colSuccess, format, args...)
 }
 
-func (m *ClientManager) pRegular(format string, args ...interface{}) {
+func (m *agridCLI) pRegular(format string, args ...interface{}) {
 	m.printf(colRegular, format, args...)
 }
 
-func (m *ClientManager) pDebug(format string, args ...interface{}) {
+func (m *agridCLI) pDebug(format string, args ...interface{}) {
 	m.printf(colDebug, format, args...)
 }
 
-func (m *ClientManager) setColors() {
+func (m *agridCLI) setColors() {
 	theme := config.colorTheme
 	if theme == "dark" {
 		m.printColor[0] = color.New(color.FgHiWhite)
@@ -103,14 +93,4 @@ func (m *ClientManager) setColors() {
 		m.printColor[5] = color.New(color.FgHiBlack)
 	}
 	//add theme as you want.
-}
-
-func (m *ClientManager) formatKey(key string) string {
-	if key != "" {
-		for len(key) < 32 {
-			key = fmt.Sprintf("%s%s", key, key)
-		}
-		key = key[0:32]
-	}
-	return key
 }

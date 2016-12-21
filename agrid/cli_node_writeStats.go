@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/freignat91/agrid/agridapi"
 	"github.com/spf13/cobra"
 )
 
@@ -10,8 +11,8 @@ var NodeWriteStatsCmd = &cobra.Command{
 	Short: "write stats in log file",
 	Long:  `write stats in log file`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := clientManager.writeStats(cmd, args); err != nil {
-			clientManager.Fatal("Error: %v\n", err)
+		if err := agridCli.NodeWriteStats(cmd, args); err != nil {
+			agridCli.Fatal("Error: %v\n", err)
 		}
 	},
 }
@@ -21,16 +22,16 @@ func init() {
 	NodeWriteStatsCmd.Flags().StringP("node", "n", "*", "Target a specific node")
 }
 
-func (m *ClientManager) writeStats(cmd *cobra.Command, args []string) error {
-	m.pInfo("Execute: writeStats\n")
-	node := cmd.Flag("node").Value.String()
-	client, err := m.getClient()
-	if err != nil {
+func (m *agridCLI) NodeWriteStats(cmd *cobra.Command, args []string) error {
+	node := "*"
+	if len(args) >= 1 {
+		node = args[0]
+	}
+	m.pInfo("Execute: writeTrage\n")
+	api := agridapi.New(config.serverAddress)
+	if err := api.InfoWriteStats(node); err != nil {
 		return err
 	}
-	if err := client.createSendMessageNoAnswer(node, "writeStatsInLog"); err != nil {
-		return err
-	}
-	m.pSuccess("done\n")
+	m.pSuccess("Stats written for node %s\n", node)
 	return nil
 }

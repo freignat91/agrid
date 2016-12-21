@@ -14,6 +14,7 @@ var functionMap map[string]interface{}
 func initFunctionMap() {
 	functionMap = make(map[string]interface{})
 	functionMap["ping"] = ping
+	functionMap["pingFromTo"] = pingFromTo
 	functionMap["serviceInfo"] = serviceInfo
 	functionMap["setLogLevel"] = setLogLevel
 	functionMap["getConnections"] = getConnections
@@ -31,6 +32,20 @@ func initFunctionMap() {
 func ping(g *GNode, name string) string {
 	logf.debug("execute ping from: %s\n", name)
 	return fmt.Sprintf("pong from %s (%s)", g.name, g.host)
+}
+
+func pingFromTo(g *GNode, target string) string {
+	logf.debug("execute pingFromTo from: %s tp %s\n", g.name, target)
+	mes := NewAntMes(target, true, "ping", "pingFromTo")
+	mret, err := g.senderManager.sendMessageReturnAnswer(mes, 3)
+	if err != nil {
+		return err.Error()
+	}
+	ret := ""
+	for _, node := range mret.Path {
+		ret += fmt.Sprintf("%s -> %s", ret, node)
+	}
+	return ret + " -> " + target
 }
 
 func getNodeName(g *GNode, dec int) string {

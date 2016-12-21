@@ -1,10 +1,12 @@
 package main
 
 import (
+	"github.com/freignat91/agrid/agridapi"
 	"github.com/freignat91/agrid/server/gnode"
 	"github.com/spf13/cobra"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // PlatformMonitor is the main command for attaching platform subcommands.
@@ -13,8 +15,8 @@ var FileStoreCmd = &cobra.Command{
 	Short: "store file",
 	Long:  `store file on the cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := clientManager.fileStore(cmd, args); err != nil {
-			clientManager.Fatal("Error: %v\n", err)
+		if err := agridCli.fileStore(cmd, args); err != nil {
+			agridCli.Fatal("Error: %v\n", err)
 		}
 	},
 }
@@ -26,7 +28,7 @@ func init() {
 	FileStoreCmd.Flags().String("key", "", "AES key to encrypt file, 32 bybes")
 }
 
-func (m *ClientManager) fileStore(cmd *cobra.Command, args []string) error {
+func (m *agridCLI) fileStore(cmd *cobra.Command, args []string) error {
 	if len(args) < 1 {
 		m.Fatal("Error: need file name as first argument\n")
 	}
@@ -47,10 +49,11 @@ func (m *ClientManager) fileStore(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		m.Fatal("Error option --thread is not a number: %s", cmd.Flag("thread").Value.String())
 	}
-	fileManager := fileManager{}
-	fileManager.init(m)
-	if err := fileManager.send(fileName, targetedPath, meta, nbThread, key); err != nil {
+	t0 := time.Now()
+	api := agridapi.New(config.serverAddress)
+	if api.FileStore(fileName, targetedPath, &meta, nbThread, key); err != nil {
 		return err
 	}
+	m.pSuccess("file %s stored as %s (%dms)\n", fileName, targetedPath, time.Now().Sub(t0).Nanoseconds()/1000000)
 	return nil
 }

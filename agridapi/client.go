@@ -1,4 +1,4 @@
-package main
+package agridapi
 
 import (
 	"fmt"
@@ -11,21 +11,21 @@ import (
 )
 
 type gnodeClient struct {
-	clientManager *ClientManager
-	id            string
-	client        gnode.GNodeServiceClient
-	nodeName      string
-	nodeHost      string
-	ctx           context.Context
-	stream        gnode.GNodeService_GetClientStreamClient
-	recvChan      chan *gnode.AntMes
-	lock          sync.RWMutex
-	conn          *grpc.ClientConn
-	nbNode        int
+	api      *AgridAPI
+	id       string
+	client   gnode.GNodeServiceClient
+	nodeName string
+	nodeHost string
+	ctx      context.Context
+	stream   gnode.GNodeService_GetClientStreamClient
+	recvChan chan *gnode.AntMes
+	lock     sync.RWMutex
+	conn     *grpc.ClientConn
+	nbNode   int
 }
 
-func (g *gnodeClient) init(clientManager *ClientManager) error {
-	g.clientManager = clientManager
+func (g *gnodeClient) init(api *AgridAPI) error {
+	g.api = api
 	g.ctx = context.Background()
 	g.recvChan = make(chan *gnode.AntMes)
 	if err := g.connectServer(); err != nil {
@@ -34,12 +34,12 @@ func (g *gnodeClient) init(clientManager *ClientManager) error {
 	if err := g.startServerReader(); err != nil {
 		return err
 	}
-	clientManager.pInfo("Client %s connected to node %s (%s)\n", g.id, g.nodeName, g.nodeHost)
+	api.info("Client %s connected to node %s (%s)\n", g.id, g.nodeName, g.nodeHost)
 	return nil
 }
 
 func (g *gnodeClient) connectServer() error {
-	cn, err := grpc.Dial(g.clientManager.server,
+	cn, err := grpc.Dial(g.api.serverAddress,
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 		grpc.WithTimeout(time.Second*20))
@@ -66,22 +66,22 @@ func (g *gnodeClient) startServerReader() error {
 	g.stream = stream
 	ack, err2 := g.stream.Recv()
 	if err2 != nil {
-		g.clientManager.pInfo("Client register EOF\n")
+		g.api.info("Client register EOF\n")
 		close(g.recvChan)
 		return fmt.Errorf("Client register error: %v\n", err2)
 	}
 	g.id = ack.FromClient
-	clientManager.pInfo("Client register: %s\n", g.id)
+	g.api.info("Client register: %s\n", g.id)
 	go func() {
 		for {
 			mes, err := g.stream.Recv()
 			if err == io.EOF {
-				clientManager.pSuccess("Server stream EOF\n")
+				g.api.debug("Server stream EOF\n")
 				close(g.recvChan)
 				return
 			}
 			if err != nil {
-				clientManager.pError("Server stream error: %v\n", err)
+				g.api.error("Server stream error: %v\n", err)
 				return
 			}
 			if mes.NoBlocking {
@@ -95,20 +95,24 @@ func (g *gnodeClient) startServerReader() error {
 				//fmt.Printf("receive mes Blocking: %v\n", mes)
 				g.recvChan <- mes
 			}
-			clientManager.pDebug("Receive answer: %v\n", mes)
+			g.api.debug("Receive answer: %v\n", mes)
 		}
 	}()
 	return nil
 }
 
+func (g *gnodeClient) createMessage(target string, returnAnswer bool, functionName string, args ...string) *gnode.AntMes {
+	return gnode.NewAntMes(target, returnAnswer, functionName, args...)
+}
+
 func (g *gnodeClient) createSendMessageNoAnswer(target string, functionName string, args ...string) error {
-	mes := gnode.CreateMessage(target, false, functionName, args...)
+	mes := gnode.NewAntMes(target, false, functionName, args...)
 	_, err := g.sendMessage(mes, true)
 	return err
 }
 
 func (g *gnodeClient) createSendMessage(target string, waitForAnswer bool, functionName string, args ...string) (*gnode.AntMes, error) {
-	mes := gnode.CreateMessage(target, true, functionName, args...)
+	mes := gnode.NewAntMes(target, true, functionName, args...)
 	return g.sendMessage(mes, waitForAnswer)
 }
 

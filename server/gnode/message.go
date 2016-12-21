@@ -5,12 +5,7 @@ import (
 )
 
 // Function dedicated for client usage
-func CreateMessage(target string, returnAnswer bool, functionName string, args ...string) *AntMes {
-	return CreateMessageWithArgName(target, returnAnswer, functionName, args)
-}
-
-// Function dedicated for client usage
-func CreateMessageWithArgName(target string, returnAnswer bool, functionName string, args []string) *AntMes {
+func NewAntMes(target string, returnAnswer bool, functionName string, args ...string) *AntMes {
 	return &AntMes{
 		Target:       target,
 		IsAnswer:     false,
