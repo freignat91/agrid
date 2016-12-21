@@ -34,35 +34,40 @@ func (api *AgridAPI) NodeKill(node string) error {
 }
 
 // NodePing ping a node
-func (api *AgridAPI) NodePing(node string, debugTrace bool) ([]string, error) {
+func (api *AgridAPI) NodePing(node string, debugTrace bool) (string, error) {
 	client, err := api.getClient()
 	if err != nil {
-		return []string{}, err
+		return "", err
 	}
 
 	mes := client.createMessage(node, true, "ping", "client")
 	mes.Debug = debugTrace
-	ret, errs := client.sendMessage(mes, true)
+	mret, errs := client.sendMessage(mes, true)
 	if errs != nil {
-		return []string{}, errs
+		return "", errs
 	}
-	return ret.Path, nil
+	ret := ""
+	for _, node := range mret.Path {
+		ret += fmt.Sprintf("%s -> %s", ret, node)
+	}
+	return fmt.Sprintf("% -> %s", client.nodeName), nil
 }
 
 // NodePingFrom ping a node from another node
-func (api *AgridAPI) NodePingFrom(node1 string, node2 string, debugTrace bool) ([]string, error) {
+func (api *AgridAPI) NodePingFromTo(node1 string, node2 string, debugTrace bool) (string, error) {
 	client, err := api.getClient()
 	if err != nil {
-		return []string{}, err
+		return "", err
 	}
 
-	mes := client.createMessage(node2, true, "ping", "client")
-	mes.Debug = debugTrace
+	mes := client.createMessage(node1, true, "pingFromTo", node2)
+	mes.Debug = true //debugTrace
+	fmt.Printf("mes: %v\n", mes)
 	ret, errs := client.sendMessage(mes, true)
 	if errs != nil {
-		return []string{}, errs
+		return "", errs
 	}
-	return ret.Path, nil
+	return ret.Args[0], nil
 }
 
 // NodeSetLogLevel set a node log level: "error", "warn", "info", "debug"

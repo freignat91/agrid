@@ -54,6 +54,18 @@ func (m *SenderManager) sendMessage(mes *AntMes) bool {
 	return m.buffer.put(mes)
 }
 
+func (m *SenderManager) sendMessageReturnAnswer(mes *AntMes, timeoutSecond int) (*AntMes, error) {
+	mes.Id = m.gnode.getNewId(true)
+	mes.Origin = m.gnode.name
+	mes.AnswerWait = true
+	m.sendMessage(mes)
+	ret, err := m.gnode.receiverManager.waitForAnswer(mes.Id, timeoutSecond)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
 func (m *SenderManager) stats() {
 	fmt.Printf("Sender: nb=%d maxbuf=%d\n", m.usage, m.buffer.max)
 	execVal := ""

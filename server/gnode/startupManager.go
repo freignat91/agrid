@@ -206,7 +206,7 @@ func (g *gnodeLeader) buildNodeName(ip net.IP) string {
 }
 
 func (g *gnodeLeader) sendUpdateGrid() {
-	mes := CreateMessage("*", true, "updateGrid", "false")
+	mes := NewAntMes("*", true, "updateGrid", "false")
 	g.gnode.senderManager.sendMessage(mes)
 }
 

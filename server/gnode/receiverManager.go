@@ -3,6 +3,7 @@ package gnode
 import (
 	"fmt"
 	"io"
+	"time"
 )
 
 type ReceiverManager struct {
@@ -13,6 +14,8 @@ type ReceiverManager struct {
 	ioChan       chan *AntMes
 	nbReceiver   int
 	receiver     MessageReceiver
+	answerMap    map[string]*AntMes
+	getChan      chan string
 }
 
 func (m *ReceiverManager) start(gnode *GNode, bufferSize int, maxGoRoutine int) {
@@ -20,6 +23,8 @@ func (m *ReceiverManager) start(gnode *GNode, bufferSize int, maxGoRoutine int) 
 	m.nbReceiver = maxGoRoutine
 	m.buffer.init(bufferSize)
 	m.ioChan = make(chan *AntMes)
+	m.getChan = make(chan string)
+	m.answerMap = make(map[string]*AntMes)
 	m.receiverList = []*MessageReceiver{}
 	if maxGoRoutine <= 0 {
 		m.receiver.gnode = gnode
@@ -43,6 +48,27 @@ func (m *ReceiverManager) start(gnode *GNode, bufferSize int, maxGoRoutine int) 
 		}
 	}()
 
+}
+
+func (m *ReceiverManager) waitForAnswer(id string, timeoutSecond int) (*AntMes, error) {
+	if mes, ok := m.answerMap[id]; ok {
+		return mes, nil
+	}
+	timer := time.AfterFunc(time.Second*time.Duration(timeoutSecond), func() {
+		m.getChan <- "timeout"
+	})
+	logf.info("Waiting for answer originId=%s\n", id)
+	for {
+		retId := <-m.getChan
+		if retId == "timeout" {
+			return nil, fmt.Errorf("Timeout wiating for message answer id=%s", id)
+		}
+		if mes, ok := m.answerMap[id]; ok {
+			logf.info("Found answer originId=%s\n", id)
+			timer.Stop()
+			return mes, nil
+		}
+	}
 }
 
 func (m *ReceiverManager) receiveMessage(mes *AntMes) bool {

@@ -36,7 +36,6 @@ func (m *agridCLI) ping(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	t1 := time.Now()
-	path = append(path, node)
-	m.pSuccess("Ping time=%d ms path: %v\n", t1.Sub(t0).Nanoseconds()/1000000, path)
+	m.pSuccess("Ping time=%d ms path: %s\n", t1.Sub(t0).Nanoseconds()/1000000, path)
 	return nil
 }

@@ -102,17 +102,17 @@ func (g *gnodeClient) startServerReader() error {
 }
 
 func (g *gnodeClient) createMessage(target string, returnAnswer bool, functionName string, args ...string) *gnode.AntMes {
-	return gnode.CreateMessage(target, returnAnswer, functionName, args...)
+	return gnode.NewAntMes(target, returnAnswer, functionName, args...)
 }
 
 func (g *gnodeClient) createSendMessageNoAnswer(target string, functionName string, args ...string) error {
-	mes := gnode.CreateMessage(target, false, functionName, args...)
+	mes := gnode.NewAntMes(target, false, functionName, args...)
 	_, err := g.sendMessage(mes, true)
 	return err
 }
 
 func (g *gnodeClient) createSendMessage(target string, waitForAnswer bool, functionName string, args ...string) (*gnode.AntMes, error) {
-	mes := gnode.CreateMessage(target, true, functionName, args...)
+	mes := gnode.NewAntMes(target, true, functionName, args...)
 	return g.sendMessage(mes, waitForAnswer)
 }
 
