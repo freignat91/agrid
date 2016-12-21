@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"github.com/freignat91/agrid/agridapi"
 	"github.com/spf13/cobra"
 )
 
@@ -10,8 +12,8 @@ var NodeKillCmd = &cobra.Command{
 	Short: "kill an agrid node",
 	Long:  `kill an agrid node`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := clientManager.kill(cmd, args); err != nil {
-			clientManager.Fatal("Error: %v\n", err)
+		if err := agridCli.kill(cmd, args); err != nil {
+			agridCli.Fatal("Error: %v\n", err)
 		}
 	},
 }
@@ -20,16 +22,16 @@ func init() {
 	NodeCmd.AddCommand(NodeKillCmd)
 }
 
-func (m *ClientManager) kill(cmd *cobra.Command, args []string) error {
-	m.pInfo("Execute: kill node %s\n", args[0])
-	client, err := m.getClient()
-	if err != nil {
+func (m *agridCLI) kill(cmd *cobra.Command, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("Needs node name as first argument")
+	}
+	node := args[0]
+	m.pInfo("Execute: kill node %s\n", node)
+	api := agridapi.New(config.serverAddress)
+	if err := api.NodeKill(node); err != nil {
 		return err
 	}
-	mes, err := client.createSendMessage(args[0], true, "killNode")
-	if err != nil {
-		return err
-	}
-	m.pSuccess("Container killed: %s\n", mes.Args[0])
+	m.pSuccess("Container killed node %s\n", node)
 	return nil
 }

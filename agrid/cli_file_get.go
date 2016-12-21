@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/freignat91/agrid/agridapi"
 	"github.com/spf13/cobra"
 	"time"
 )
@@ -11,8 +12,8 @@ var FileGetCmd = &cobra.Command{
 	Short: "get file",
 	Long:  `get file from the cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := clientManager.fileGet(cmd, args); err != nil {
-			clientManager.Fatal("Error: %v\n", err)
+		if err := agridCli.fileGet(cmd, args); err != nil {
+			agridCli.Fatal("Error: %v\n", err)
 		}
 	},
 }
@@ -23,7 +24,7 @@ func init() {
 	FileGetCmd.Flags().String("key", "", "AES key to encrypt file, 32 bybes")
 }
 
-func (m *ClientManager) fileGet(cmd *cobra.Command, args []string) error {
+func (m *agridCLI) fileGet(cmd *cobra.Command, args []string) error {
 	if len(args) < 2 {
 		m.Fatal("Error missing arguments: usage: get [cluster file] [local file]\n")
 	}
@@ -32,9 +33,9 @@ func (m *ClientManager) fileGet(cmd *cobra.Command, args []string) error {
 	m.pInfo("Execute: get file: %s to %d\n", clusterFile, localFile)
 	key := cmd.Flag("key").Value.String()
 	t0 := time.Now()
-	fileReceiver := fileReceiver{}
-	fileReceiver.init(m)
-	if err := fileReceiver.get(clusterFile, localFile, key); err != nil {
+
+	api := agridapi.New(config.serverAddress)
+	if err := api.FileGet(clusterFile, localFile, key); err != nil {
 		return err
 	}
 	m.pSuccess("file %s received (%dms)\n", localFile, time.Now().Sub(t0).Nanoseconds()/1000000)

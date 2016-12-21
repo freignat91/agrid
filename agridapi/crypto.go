@@ -1,4 +1,4 @@
-package main
+package agridapi
 
 import (
 	"crypto/aes"

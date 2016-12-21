@@ -1,4 +1,4 @@
-package main
+package agridapi
 
 import (
 	"crypto/md5"
@@ -11,21 +11,20 @@ import (
 )
 
 type fileSender struct {
-	clientManager *ClientManager
+	api           *AgridAPI
 	nbFile        int
 	clients       []*gnodeClient
 	currentClient int
 	cipher        *gCipher
 }
 
-func (m *fileSender) init(clientManager *ClientManager) {
-	m.clientManager = clientManager
+func (m *fileSender) init(api *AgridAPI) {
+	m.api = api
 	m.currentClient = 0
 }
 
-func (m *fileSender) send(fileName string, target string, meta []string, nbThread int, key string) error {
-	key = m.clientManager.formatKey(key)
-	t0 := time.Now()
+func (m *fileSender) send(fileName string, target string, pMeta *[]string, nbThread int, key string) error {
+	key = m.api.formatKey(key)
 	f, err := os.Open(fileName)
 	if err != nil {
 		return err
@@ -47,13 +46,16 @@ func (m *fileSender) send(fileName string, target string, meta []string, nbThrea
 		totalBlock++
 	}
 	transferIds := []string{}
+	meta := []string{}
+	if pMeta != nil {
+		meta = *pMeta
+	}
 
 	if key != "" {
-		m.clientManager.pInfo("Encrypted transfer\n")
+		m.api.info("Encrypted transfer\n")
 		m.cipher = &gCipher{}
 		if err := m.cipher.init([]byte(key)); err != nil {
-			m.clientManager.pError("Cipher init error: %v\n", err)
-			m.cipher = nil
+			return fmt.Errorf("Cipher init error: %v", err)
 		}
 	}
 
@@ -64,7 +66,7 @@ func (m *fileSender) send(fileName string, target string, meta []string, nbThrea
 		}
 		transferId := fmt.Sprintf("%s-%d", tId, i)
 		transferIds = append(transferIds, transferId)
-		m.clientManager.pRegular("client %d tf=%s nbBlock=%d\n", i, transferId, nbBlock)
+		m.api.info("client %d tf=%s nbBlock=%d\n", i, transferId, nbBlock)
 		_, err := client.client.SendFile(context.Background(), &gnode.SendFileRequest{
 			Name:       fileName,
 			Path:       target,
@@ -79,7 +81,7 @@ func (m *fileSender) send(fileName string, target string, meta []string, nbThrea
 			return err
 		}
 	}
-	m.clientManager.pInfo("Bloc size: %d\n", blockSize)
+	m.api.info("Bloc size: %d\n", blockSize)
 	block := &gnode.AntMes{
 		Target:   "",
 		Function: "sendBlock",
@@ -87,7 +89,6 @@ func (m *fileSender) send(fileName string, target string, meta []string, nbThrea
 		Size:     int64(blockSize),
 		Order:    0,
 	}
-	m.clientManager.pSuccess("Block size: %d\n", blockSize)
 	m.currentClient = -1
 	for {
 
@@ -118,19 +119,18 @@ func (m *fileSender) send(fileName string, target string, meta []string, nbThrea
 		for _, client := range m.clients {
 			mes, ok := client.getNextAnswer(30000)
 			if !ok {
-				m.clientManager.Fatal("file %s storage timeout\n", fileName)
+				return fmt.Errorf("file %s storage timeout", fileName)
 			}
 			if mes.Function == "FileSendAck" {
 				nbOk++
 			} else {
-				m.clientManager.pRegular("File store ongoing\n")
+				m.api.info("File store ongoing\n")
 			}
 		}
 		if nbOk >= nbThread {
 			break
 		}
 	}
-	m.clientManager.pSuccess("file %s stored as %s (%dms)\n", fileName, target, time.Now().Sub(t0).Nanoseconds()/1000000)
 	return nil
 }
 
@@ -143,7 +143,7 @@ func (m *fileSender) close() {
 func (m *fileSender) initClients(nb int) error {
 	m.clients = make([]*gnodeClient, nb, nb)
 	for i, _ := range m.clients {
-		if cli, err := m.clientManager.getClient(); err != nil {
+		if cli, err := m.api.getClient(); err != nil {
 			return err
 		} else {
 			m.clients[i] = cli

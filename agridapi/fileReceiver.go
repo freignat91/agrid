@@ -1,27 +1,27 @@
-package main
+package agridapi
 
 import (
-	//"crypto/md5"
-	//"fmt"
+	"fmt"
 	"github.com/freignat91/agrid/server/gnode"
 	"golang.org/x/net/context"
-	//"io"
 	"os"
 	"time"
 )
 
 type fileReceiver struct {
-	clientManager *ClientManager
-	nbFile        int
-	cipher        *gCipher
+	api         *AgridAPI
+	nbFile      int
+	cipher      *gCipher
+	chanReceive chan string
 }
 
-func (m *fileReceiver) init(clientManager *ClientManager) {
-	m.clientManager = clientManager
+func (m *fileReceiver) init(api *AgridAPI) {
+	m.api = api
+	m.chanReceive = make(chan string)
 }
 
 func (m *fileReceiver) get(clusterFile string, localFile string, key string) error {
-	client, err := m.clientManager.getClient()
+	client, err := m.api.getClient()
 	if err != nil {
 		return err
 	}
@@ -32,11 +32,18 @@ func (m *fileReceiver) get(clusterFile string, localFile string, key string) err
 	if errg != nil {
 		return err
 	}
-	return m.receiveFile(client, localFile, key)
+	go func() {
+		m.receiveFile(client, localFile, key)
+	}()
+	ret := <-m.chanReceive
+	if ret != "ok" {
+		return fmt.Errorf("%s", ret)
+	}
+	return nil
 }
 
 func (m *fileReceiver) receiveFile(client *gnodeClient, localFile string, key string) error {
-	key = m.clientManager.formatKey(key)
+	key = m.api.formatKey(key)
 	file, err := os.Create(localFile)
 	if err != nil {
 		return err
@@ -46,21 +53,19 @@ func (m *fileReceiver) receiveFile(client *gnodeClient, localFile string, key st
 	blockSize := int64(gnode.GNodeBlockSize * 1024)
 	nbBlock := int64(0)
 	timer := time.AfterFunc(time.Millisecond*time.Duration(30000), func() {
-		m.clientManager.pError("get file timeout\n")
-		os.Exit(1)
+		m.chanReceive <- "get file timeout"
 	})
 	if key != "" {
-		m.clientManager.pInfo("Encrypted transfer\n")
+		m.api.info("Encrypted transfer\n")
 		m.cipher = &gCipher{}
 		if err := m.cipher.init([]byte(key)); err != nil {
-			m.clientManager.pError("Cipher init error: %v\n", err)
-			m.cipher = nil
+			return fmt.Errorf("Cipher init error: %v", err)
 		}
 	}
 
 	for {
 		mes, _ := client.getNextAnswer(0)
-		m.clientManager.pInfo("received mes %d/%d (%d)\n", mes.Order, mes.NbBlock, len(orderMap))
+		m.api.info("received mes %d/%d (%d)\n", mes.Order, mes.NbBlock, len(orderMap))
 		if nbBlock == 0 {
 			nbBlock = mes.NbBlock
 			//fmt.Printf("nbBlock set to %d\n", mes.NbBlock)
@@ -85,5 +90,6 @@ func (m *fileReceiver) receiveFile(client *gnodeClient, localFile string, key st
 		}
 	}
 	timer.Stop()
+	m.chanReceive <- "ok"
 	return nil
 }

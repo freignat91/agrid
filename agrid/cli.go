@@ -17,12 +17,12 @@ var (
 )
 
 func cli() {
-	RootCmd.PersistentFlags().StringVar(&clientManager.server, "server", "127.0.0.1:30103", "Server address")
-	RootCmd.PersistentFlags().BoolVarP(&clientManager.verbose, "verbose", "v", false, `Verbose output`)
-	RootCmd.PersistentFlags().BoolVarP(&clientManager.silence, "silence", "s", false, `Silence output`)
-	RootCmd.PersistentFlags().BoolVar(&clientManager.debug, "debug", false, `Silence output`)
+	RootCmd.PersistentFlags().StringVar(&agridCli.server, "server", "127.0.0.1:30103", "Server address")
+	RootCmd.PersistentFlags().BoolVarP(&agridCli.verbose, "verbose", "v", false, `Verbose output`)
+	RootCmd.PersistentFlags().BoolVarP(&agridCli.silence, "silence", "s", false, `Silence output`)
+	RootCmd.PersistentFlags().BoolVar(&agridCli.debug, "debug", false, `Silence output`)
 	cobra.OnInitialize(func() {
-		if err := clientManager.init(); err != nil {
+		if err := agridCli.init(); err != nil {
 			fmt.Printf("Init error: %v\n", err)
 			os.Exit(1)
 		}
