@@ -29,7 +29,8 @@ func (m *agridCLI) nodePingFromTo(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Needs two arguements: sender node name and targeted node name")
 	}
 	t0 := time.Now()
-	api := agridapi.New(config.serverAddress)
+	api := agridapi.New(m.server)
+	m.setAPILogLevel(api)
 	path, err := api.NodePingFromTo(args[0], args[1], m.debug)
 	if err != nil {
 		return err

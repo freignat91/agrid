@@ -36,7 +36,7 @@ func (api *AgridAPI) getClient() (*gnodeClient, error) {
 	return &client, nil
 }
 
-func (api *AgridAPI) setLevel(level string) {
+func (api *AgridAPI) SetLogLevel(level string) {
 	if strings.ToLower(level) == "error" {
 		api.logLevel = LOG_ERROR
 	} else if strings.ToLower(level) == "warn" {
@@ -48,7 +48,7 @@ func (api *AgridAPI) setLevel(level string) {
 	}
 }
 
-func (api *AgridAPI) levelString() string {
+func (api *AgridAPI) LogLevelString() string {
 	switch api.logLevel {
 	case LOG_ERROR:
 		return "error"

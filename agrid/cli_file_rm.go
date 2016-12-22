@@ -34,7 +34,8 @@ func (m *agridCLI) fileRemove(cmd *cobra.Command, args []string) error {
 		recursive = true
 	}
 	t0 := time.Now()
-	api := agridapi.New(config.serverAddress)
+	api := agridapi.New(m.server)
+	m.setAPILogLevel(api)
 
 	err, done := api.FileRm(fileName, recursive)
 	t1 := time.Now()

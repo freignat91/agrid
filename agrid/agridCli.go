@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/fatih/color"
+	"github.com/freignat91/agrid/agridapi"
 	"os"
 )
 
@@ -93,4 +94,16 @@ func (m *agridCLI) setColors() {
 		m.printColor[5] = color.New(color.FgHiBlack)
 	}
 	//add theme as you want.
+}
+
+func (m *agridCLI) setAPILogLevel(api *agridapi.AgridAPI) {
+	if m.silence {
+		api.SetLogLevel("error")
+	} else if m.verbose {
+		api.SetLogLevel("info")
+	} else if m.debug {
+		api.SetLogLevel("debug")
+	} else {
+		api.SetLogLevel("warn")
+	}
 }

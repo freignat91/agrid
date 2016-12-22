@@ -30,7 +30,8 @@ func (m *agridCLI) ping(cmd *cobra.Command, args []string) error {
 	node := args[0]
 	m.pInfo("Execute: ping %s\n", node)
 	t0 := time.Now()
-	api := agridapi.New(config.serverAddress)
+	api := agridapi.New(m.server)
+	m.setAPILogLevel(api)
 	path, err := api.NodePing(node, false)
 	if err != nil {
 		return err

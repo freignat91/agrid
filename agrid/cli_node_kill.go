@@ -28,7 +28,8 @@ func (m *agridCLI) kill(cmd *cobra.Command, args []string) error {
 	}
 	node := args[0]
 	m.pInfo("Execute: kill node %s\n", node)
-	api := agridapi.New(config.serverAddress)
+	api := agridapi.New(m.server)
+	m.setAPILogLevel(api)
 	if err := api.NodeKill(node); err != nil {
 		return err
 	}

@@ -15,6 +15,7 @@ type fileReceiver struct {
 	cipher      *gCipher
 	chanReceive chan string
 	writeLock   sync.RWMutex
+	orderMap    map[int]byte
 }
 
 func (m *fileReceiver) init(api *AgridAPI) {
@@ -37,19 +38,16 @@ func (m *fileReceiver) retrieveFile(clusterFile string, localFile string, nbThre
 			return fmt.Errorf("Cipher init error: %v", err)
 		}
 	}
+	m.orderMap = make(map[int]byte)
 	for thread := 0; thread < nbThread; thread++ {
 		m.retrieveFileThread(clusterFile, thread, nbThread, key, file)
 	}
-	nb := 0
 	for {
 		ret := <-m.chanReceive
 		if ret != "ok" {
 			return fmt.Errorf("%s", ret)
 		}
-		nb++
-		if nb == nbThread {
-			return nil
-		}
+		return nil
 	}
 }
 
@@ -70,22 +68,16 @@ func (m *fileReceiver) retrieveFileThread(clusterFile string, thread int, nbThre
 			m.chanReceive <- errg.Error()
 			return
 		}
-		orderMap := make(map[int]byte)
 		blockSize := int64(gnode.GNodeBlockSize * 1024)
 		nbBlock := int64(0)
-		timer := time.AfterFunc(time.Millisecond*time.Duration(30000), func() {
+		timer := time.AfterFunc(time.Millisecond*time.Duration(130000), func() {
 			m.chanReceive <- "retrieve file timeout"
 		})
-
+		nb := 0
 		for {
 			mes, _ := client.getNextAnswer(0)
-			m.api.info("Thread %d received mes %d/%d (%d)\n", thread, mes.Order, mes.NbBlock, len(orderMap))
 			if nbBlock == 0 {
-				nbBlock = mes.NbBlock / int64(nbThread)
-				if mes.NbBlock%int64(nbThread) >= int64(thread+1) {
-					nbBlock++
-				}
-				//fmt.Printf("Thread %d: nbBlock set to %d\n", thread, mes.NbBlock)
+				nbBlock = mes.NbBlock
 			}
 			if m.cipher != nil {
 				dat, err := m.cipher.decrypt(mes.Data)
@@ -104,12 +96,18 @@ func (m *fileReceiver) retrieveFileThread(clusterFile string, thread int, nbThre
 				m.chanReceive <- err.Error()
 				return
 			}
-			m.writeLock.Unlock()
-			timer.Reset(time.Millisecond * 30000)
-			orderMap[int(mes.Order)] = 1
-			if len(orderMap) == int(nbBlock) {
+			nb++
+			if nb%100 == 0 {
+				file.Sync()
+			}
+			m.orderMap[int(mes.Order)] = 1
+			if len(m.orderMap) == int(nbBlock) {
+				m.api.info("Thread %d received last mes %d/%d (%d)\n", thread, mes.Order, mes.NbBlock, len(m.orderMap))
 				break
 			}
+			m.writeLock.Unlock()
+			m.api.info("Thread %d received mes %d/%d (%d)\n", thread, mes.Order, mes.NbBlock, len(m.orderMap))
+			timer.Reset(time.Millisecond * 130000)
 		}
 		timer.Stop()
 		m.chanReceive <- "ok"

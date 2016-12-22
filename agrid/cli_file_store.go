@@ -50,7 +50,8 @@ func (m *agridCLI) fileStore(cmd *cobra.Command, args []string) error {
 		m.Fatal("Error option --thread is not a number: %s", cmd.Flag("thread").Value.String())
 	}
 	t0 := time.Now()
-	api := agridapi.New(config.serverAddress)
+	api := agridapi.New(m.server)
+	m.setAPILogLevel(api)
 	if api.FileStore(fileName, targetedPath, &meta, nbThread, key); err != nil {
 		return err
 	}

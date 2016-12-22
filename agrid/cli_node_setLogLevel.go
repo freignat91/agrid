@@ -29,7 +29,8 @@ func (m *agridCLI) setLogLevel(cmd *cobra.Command, args []string) error {
 	}
 	m.pInfo("Execute: setLogLevel %s\n", args[0])
 	node := cmd.Flag("node").Value.String()
-	api := agridapi.New(config.serverAddress)
+	api := agridapi.New(m.server)
+	m.setAPILogLevel(api)
 	if err := api.NodeSetLogLevel(node, args[0]); err != nil {
 		return err
 	}

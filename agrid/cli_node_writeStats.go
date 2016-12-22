@@ -28,7 +28,8 @@ func (m *agridCLI) NodeWriteStats(cmd *cobra.Command, args []string) error {
 		node = args[0]
 	}
 	m.pInfo("Execute: writeTrage\n")
-	api := agridapi.New(config.serverAddress)
+	api := agridapi.New(m.server)
+	m.setAPILogLevel(api)
 	if err := api.InfoWriteStats(node); err != nil {
 		return err
 	}

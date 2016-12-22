@@ -26,7 +26,8 @@ func (m *agridCLI) fileList(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		path = args[0]
 	}
-	api := agridapi.New(config.serverAddress)
+	api := agridapi.New(m.server)
+	m.setAPILogLevel(api)
 	lineList, err := api.FileLs(path)
 	if err != nil {
 		m.Fatal("%v\n", err)

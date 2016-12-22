@@ -36,11 +36,12 @@ func (m *agridCLI) fileRetrieve(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		m.Fatal("Error option --thread is not a number: %s", cmd.Flag("thread").Value.String())
 	}
-	m.pInfo("Execute: get file: %s to %d\n", clusterFile, localFile)
+	m.pInfo("Execute: retrieve file: %s to %s\n", clusterFile, localFile)
 	key := cmd.Flag("key").Value.String()
 	t0 := time.Now()
 
-	api := agridapi.New(config.serverAddress)
+	api := agridapi.New(m.server)
+	m.setAPILogLevel(api)
 	if err := api.FileRetrieve(clusterFile, localFile, nbThread, key); err != nil {
 		return err
 	}

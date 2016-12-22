@@ -24,7 +24,8 @@ func init() {
 func (m *agridCLI) getNodeList(cmd *cobra.Command, args []string) error {
 	m.pInfo("Execute: getNodeList\n")
 
-	api := agridapi.New(config.serverAddress)
+	api := agridapi.New(m.server)
+	m.setAPILogLevel(api)
 	list, err := api.NodeLs()
 	if err != nil {
 		return err
