@@ -29,7 +29,8 @@ IMAGE := $(OWNER)/$(NAME):$(TAG)
 REPO := github.com/$(OWNER)/$(NAME)
 
 CLIENT := agrid
-NODE := server
+SERVER := server
+TESTS := tests
 
 all: version check install
 
@@ -42,10 +43,10 @@ clean:
 install-client: 
 	@go install $(LDFLAGS) $(REPO)/$(CLIENT)
 
-install-node: 
-	@go install $(LDFLAGS) $(REPO)/$(NODE)  
+install-server: 
+	@go install $(LDFLAGS) $(REPO)/$(SERVER)  
 
-install: install-node install-client
+install: install-server install-client
 
 proto: 
 	@protoc server/gnode/gnode.proto --go_out=plugins=grpc:.
@@ -72,7 +73,7 @@ update-deps:
 	@glide update --strip-vcs --strip-vendor --update-vendored
 
 test:
-	@go test -v $(REPO)
+	@go run ./tests/main.go
 
 start:
 	@docker node inspect self > /dev/null 2>&1 || docker swarm inspect > /dev/null 2>&1 || (echo "> Initializing swarm" && docker swarm init --advertise-addr 127.0.0.1)

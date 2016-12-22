@@ -51,7 +51,7 @@ func (r *MessageReceiver) executeMessage(mes *AntMes) {
 			}
 			return
 		} else if mes.Function == "getFileBlocks" {
-			if err := r.gnode.fileManager.sendBlock(mes); err != nil {
+			if err := r.gnode.fileManager.sendBlocks(mes); err != nil {
 				logf.error("Send block error: %v\n", err)
 			}
 			return

@@ -79,10 +79,10 @@ func (g *GNode) AskConnection(ctx context.Context, req *AskConnectionRequest) (*
 	return ret, nil
 }
 
-func (g *GNode) SendFile(ctx context.Context, req *SendFileRequest) (*SendFileRet, error) {
-	return g.fileManager.sendFile(req)
+func (g *GNode) StoreFile(ctx context.Context, req *StoreFileRequest) (*StoreFileRet, error) {
+	return g.fileManager.storeFile(req)
 }
 
-func (g *GNode) GetFile(ctx context.Context, req *GetFileRequest) (*GetFileRet, error) {
-	return g.fileManager.getFile(req)
+func (g *GNode) RetrieveFile(ctx context.Context, req *RetrieveFileRequest) (*RetrieveFileRet, error) {
+	return g.fileManager.retrieveFile(req)
 }
