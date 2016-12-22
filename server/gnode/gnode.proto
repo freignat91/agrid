@@ -7,8 +7,8 @@ service GNodeService {
         rpc GetClientStream (stream AntMes) returns (stream AntMes) {}
         rpc AskConnection (AskConnectionRequest) returns (PingRet) {}
         rpc Ping (AntMes) returns (PingRet) {}
-        rpc SendFile(SendFileRequest) returns (SendFileRet) {}
-        rpc GetFile(GetFileRequest) returns (GetFileRet) {}
+        rpc StoreFile(StoreFileRequest) returns (StoreFileRet) {}
+        rpc RetrieveFile(RetrieveFileRequest) returns (RetrieveFileRet) {}
 }
 
 message AntMes {
@@ -26,14 +26,17 @@ message AntMes {
         repeated string args = 12;
         string transfer_id = 13;
         int64 order = 14;
-        int64 nb_block = 15;
-        int32 replicas = 16;
-        int64 size = 17;
-        string targeted_path = 18;
-        bool no_blocking = 19;
-        bool debug = 20;
-        bool answer_wait = 21;
-        bytes data = 22;
+        int64 nb_block_total = 15;
+        int64 nb_block = 16;
+        int32 replicas = 17;
+        int64 size = 18;
+        string targeted_path = 19;
+        bool no_blocking = 20;
+        bool debug = 21;
+        bool answer_wait = 22;
+        int32 nb_thread = 23;
+        int32 thread = 24;
+        bytes data = 25;
 }
 
 message AntRet{
@@ -54,18 +57,19 @@ message AskConnectionRequest{
         string ip = 3;
 }
 
-message SendFileRequest{
+message StoreFileRequest{
         string client_id = 1;
         string name = 2;
         string path = 3;
-        int64 nb_block = 4;
-        int64 blockSize = 5;
-        string transfer_id = 6;
-        string key = 7;
-        repeated string metadata = 8;
+        int64 nb_block_total = 4;
+        int64 nb_block = 5;
+        int64 blockSize = 6;
+        string transfer_id = 7;
+        string key = 8;
+        repeated string metadata = 9;
 }
 
-message SendFileRet{
+message StoreFileRet{
         string transfer_id = 1;
         int64 block_size = 2;
 }
@@ -74,14 +78,14 @@ message EmptyRet{
         
 }
 
-message GetFileRequest{
+message RetrieveFileRequest{
         string client_id = 1;
         string name = 2;
         int32 nbThread = 3;
         int32 thread = 4;
 }
 
-message GetFileRet{
+message RetrieveFileRet{
         string transfer_id = 1;
         int64 block_size = 2;
 }

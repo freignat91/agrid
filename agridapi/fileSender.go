@@ -23,7 +23,7 @@ func (m *fileSender) init(api *AgridAPI) {
 	m.currentClient = 0
 }
 
-func (m *fileSender) send(fileName string, target string, pMeta *[]string, nbThread int, key string) error {
+func (m *fileSender) storeFile(fileName string, target string, pMeta *[]string, nbThread int, key string) error {
 	key = m.api.formatKey(key)
 	f, err := os.Open(fileName)
 	if err != nil {
@@ -67,15 +67,16 @@ func (m *fileSender) send(fileName string, target string, pMeta *[]string, nbThr
 		transferId := fmt.Sprintf("%s-%d", tId, i)
 		transferIds = append(transferIds, transferId)
 		m.api.info("client %d tf=%s nbBlock=%d\n", i, transferId, nbBlock)
-		_, err := client.client.SendFile(context.Background(), &gnode.SendFileRequest{
-			Name:       fileName,
-			Path:       target,
-			NbBlock:    nbBlock,
-			ClientId:   client.id,
-			TransferId: transferId,
-			Metadata:   meta,
-			BlockSize:  int64(blockSize * 1024),
-			Key:        key,
+		_, err := client.client.StoreFile(context.Background(), &gnode.StoreFileRequest{
+			Name:         fileName,
+			Path:         target,
+			NbBlockTotal: totalBlock,
+			NbBlock:      nbBlock,
+			ClientId:     client.id,
+			TransferId:   transferId,
+			Metadata:     meta,
+			BlockSize:    int64(blockSize * 1024),
+			Key:          key,
 		})
 		if err != nil {
 			return err

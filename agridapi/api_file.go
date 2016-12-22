@@ -49,17 +49,17 @@ func (api *AgridAPI) FileLs(folder string) ([]string, error) {
 func (api *AgridAPI) FileStore(localFile string, clusterPathname string, meta *[]string, nbThread int, key string) error {
 	fileSender := fileSender{}
 	fileSender.init(api)
-	if err := fileSender.send(localFile, clusterPathname, meta, nbThread, key); err != nil {
+	if err := fileSender.storeFile(localFile, clusterPathname, meta, nbThread, key); err != nil {
 		return err
 	}
 	return nil
 }
 
 // FileGet get a file from cluster
-func (api *AgridAPI) FileGet(clusterPathname string, localFile string, key string) error {
+func (api *AgridAPI) FileRetrieve(clusterPathname string, localFile string, nbThread int, key string) error {
 	fileReceiver := fileReceiver{}
 	fileReceiver.init(api)
-	if err := fileReceiver.get(clusterPathname, localFile, key); err != nil {
+	if err := fileReceiver.retrieveFile(clusterPathname, localFile, nbThread, key); err != nil {
 		return err
 	}
 	return nil

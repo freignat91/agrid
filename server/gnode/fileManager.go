@@ -28,6 +28,7 @@ type FileTransfer struct {
 	id            string
 	name          string
 	toBeReceived  int64
+	nbBlockTotal  int64
 	path          string
 	orderMap      map[int]byte
 	lockAck       sync.RWMutex
@@ -42,7 +43,7 @@ func (f *FileManager) init(gnode *GNode) {
 	f.transferMap = make(map[string]*FileTransfer)
 }
 
-func (f *FileManager) sendFile(req *SendFileRequest) (*SendFileRet, error) {
+func (f *FileManager) storeFile(req *StoreFileRequest) (*StoreFileRet, error) {
 	f.transferNumber++
 	transfer := &FileTransfer{
 		clientId:      req.ClientId,
@@ -51,6 +52,7 @@ func (f *FileManager) sendFile(req *SendFileRequest) (*SendFileRet, error) {
 		path:          req.Path,
 		blockSize:     req.BlockSize,
 		toBeReceived:  req.NbBlock,
+		nbBlockTotal:  req.NbBlockTotal,
 		orderMap:      make(map[int]byte),
 		lockAck:       sync.RWMutex{},
 		lastClientMes: time.Now(),
@@ -58,7 +60,7 @@ func (f *FileManager) sendFile(req *SendFileRequest) (*SendFileRet, error) {
 	}
 	f.transferMap[req.TransferId] = transfer
 	logf.info("sendFile received: req=%+v\n", req)
-	return &SendFileRet{}, nil
+	return &StoreFileRet{}, nil
 }
 
 func (f *FileManager) receiveBlocFromClient(mes *AntMes) error {
@@ -81,6 +83,7 @@ func (f *FileManager) receiveBlocFromClient(mes *AntMes) error {
 			TransferId:   transfer.id,
 			Order:        mes.Order,
 			NbBlock:      transfer.toBeReceived,
+			NbBlockTotal: transfer.nbBlockTotal,
 			Size:         mes.Size,
 			TargetedPath: transfer.path,
 			Replicas:     int32(nn + 1),
@@ -161,7 +164,7 @@ func (f *FileManager) storeBlock(mes *AntMes) error {
 func (f *FileManager) writeBlock(mes *AntMes) error {
 	dir := fmt.Sprintf("%s/%s.%d%s", f.gnode.dataPath, mes.TargetedPath, mes.Replicas, GNodeFileSuffixe)
 	os.MkdirAll(dir, os.ModeDir)
-	name := fmt.Sprintf("b.%d.%d", mes.Order, mes.NbBlock)
+	name := fmt.Sprintf("b.%d.%d", mes.Order, mes.NbBlockTotal)
 	//logf.info("writeblock: %s / %s\n", dir, name)
 	file, err := os.Create(path.Join(dir, name))
 	if err != nil {
@@ -250,7 +253,7 @@ func (f *FileManager) getTrueName(name string) string {
 	return tname
 }
 
-func (f *FileManager) getFile(req *GetFileRequest) (*GetFileRet, error) {
+func (f *FileManager) retrieveFile(req *RetrieveFileRequest) (*RetrieveFileRet, error) {
 	f.transferNumber++
 	md5 := md5.New()
 	io.WriteString(md5, req.Name)
@@ -270,17 +273,20 @@ func (f *FileManager) getFile(req *GetFileRequest) (*GetFileRet, error) {
 		TargetedPath: req.Name,
 		TransferId:   transferId,
 		Replicas:     1,
+		NbThread:     req.NbThread,
+		Thread:       req.Thread,
 	}
 	mes.Origin = f.gnode.name
 	f.gnode.receiverManager.receiveMessage(mes)
 	f.gnode.senderManager.sendMessage(mes)
-	return &GetFileRet{TransferId: transferId}, nil
+	return &RetrieveFileRet{TransferId: transferId}, nil
 }
 
-func (f *FileManager) sendBlock(mes *AntMes) error {
+func (f *FileManager) sendBlocks(mes *AntMes) error {
 	//logf.info("sendBlock: %s\n", mes.toString())
 	fileName := fmt.Sprintf("%s/%s.%d%s", f.gnode.dataPath, mes.TargetedPath, mes.Replicas, GNodeFileSuffixe)
-	//logf.info("fileName=%s\n", fileName)
+	nbThread := int(mes.NbThread)
+	thread := int(mes.Thread)
 	files, _ := ioutil.ReadDir(fileName)
 	for _, fl := range files {
 		if fl.Name() != "meta" {
@@ -288,29 +294,30 @@ func (f *FileManager) sendBlock(mes *AntMes) error {
 			if err != nil {
 				logf.error("Error extracting data from name: %v\n", err)
 			} else {
-				name := path.Join(fileName, fl.Name())
-				//logf.info("Found file %s\n", name)
-				rfile, err := os.Open(name)
-				if err != nil {
-					logf.error("Error opening file %s\n", name)
-				} else {
-					defer rfile.Close()
-					mesr := &AntMes{
-						Origin:     f.gnode.name,
-						Target:     mes.Origin,
-						Function:   "sendBackBlock",
-						TransferId: mes.TransferId,
-						Order:      int64(order),
-						NbBlock:    int64(nbBlock),
-					}
-					mesr.Data = make([]byte, GNodeBlockSize*1024, GNodeBlockSize*1024)
-					nn, err := rfile.Read(mesr.Data)
+				if order%nbThread == thread {
+					name := path.Join(fileName, fl.Name())
+					rfile, err := os.Open(name)
 					if err != nil {
-						logf.error("Error reading file %s\n", name)
+						logf.error("Error opening file %s\n", name)
+					} else {
+						defer rfile.Close()
+						mesr := &AntMes{
+							Origin:     f.gnode.name,
+							Target:     mes.Origin,
+							Function:   "sendBackBlock",
+							TransferId: mes.TransferId,
+							Order:      int64(order),
+							NbBlock:    int64(nbBlock),
+						}
+						mesr.Data = make([]byte, GNodeBlockSize*1024, GNodeBlockSize*1024)
+						nn, err := rfile.Read(mesr.Data)
+						if err != nil {
+							logf.error("Error reading file %s\n", name)
+						}
+						mesr.Data = mesr.Data[:nn]
+						//logf.info("sendBlock order=%d\n", order)
+						f.gnode.senderManager.sendMessage(mesr)
 					}
-					mesr.Data = mesr.Data[:nn]
-					//logf.info("sendBlock order=%d\n", order)
-					f.gnode.senderManager.sendMessage(mesr)
 				}
 			}
 		}

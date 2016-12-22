@@ -86,6 +86,8 @@ Agrid can share its storage between users. Each user got a home folder to store 
 
 # CLI
 
+Agrid command lines implemented using the Agrid Go API
+
 
 ### store a file on cluster:
 
@@ -96,11 +98,12 @@ Agrid can share its storage between users. Each user got a home folder to store 
 - <--key>: optionally: AES key to encrypt the file
 
 
-### get a file from cluster
+### retrieve a file from cluster
 
-`agrid file get [source] [target] <--key>`
+`agrid file retrieve [source] [target] <--key>`
 - [source]: the full pathname of the file to get in cluster
 - [target]: the full pathname of the file to write locally
+- <--thread>: optionally: number of threads used to retrieve the file (default 1), each thread open a grpc connection on a distinct node.
 - <--key>: optionally: AES key to encrypt the file
 
 
@@ -124,6 +127,7 @@ Agrid can share its storage between users. Each user got a home folder to store 
 
 `agrid node ping |node]`
 - [node] the node name to ping
+
 
 # API
 
@@ -155,12 +159,13 @@ Arguments:
 - nbThread: number of threads used to store the file (each thread open a distinc grpc connection)
 - key: AES key to encrypt the file on the cluster 
 
-### func (api *AgridAPI) FileGet(clusterPathname string, localFile string, key string) error
+### func (api *AgridAPI) FileRetrieve(clusterPathname string, localFile string, nbThread int, key string) error
 
 Get a file from the cluster
 Arguments:
 - clusterPathname: pathname of the file to get on the cluster
 - localFile: pathname of the file to write locally
+- nbThread: number of threads used to store the file (each thread open a distinc grpc connection)
 - key: AES key to decrypt the file
 
 ### func (api *AgridAPI) FileRm(clusterPathname string, recursive bool) (error, bool) 
