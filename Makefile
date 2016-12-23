@@ -88,6 +88,4 @@ stop:
 	@docker service rm agrid || true
 init:
 	@docker service rm agrid || true
-	@rm -f ./leader.txt
-	@echo "" > ./index.txt
 	@rm -f ./logs/*
