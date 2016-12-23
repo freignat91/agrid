@@ -3,7 +3,6 @@ package gnode
 import (
 	"fmt"
 	"os"
-	"path"
 	"runtime"
 	"runtime/debug"
 	"time"
@@ -22,7 +21,6 @@ func initFunctionMap() {
 	functionMap["updateGrid"] = updateGrid
 	functionMap["writeStatsInLog"] = writeStatsInLog
 	functionMap["removeFile"] = removeFile
-	functionMap["listFile"] = listFile
 	functionMap["clear"] = clear
 	functionMap["forceGC"] = forceGC
 	functionMap["getNodeName"] = getNodeName
@@ -109,12 +107,4 @@ func forceGC(g *GNode, verbose bool) {
 
 func removeFile(g *GNode, fileName string, recursive bool) string {
 	return g.fileManager.removeFile(fileName, recursive)
-}
-
-func listFile(g *GNode, pathname string) string {
-	logf.info("received file ls\n")
-	list := ""
-	fullName := path.Join(g.dataPath, pathname)
-	g.fileManager.listFile(&list, fullName)
-	return list
 }

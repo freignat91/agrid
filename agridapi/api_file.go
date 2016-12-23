@@ -3,7 +3,6 @@ package agridapi
 import (
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -14,22 +13,24 @@ func (api *AgridAPI) FileLs(folder string) ([]string, error) {
 	if err != nil {
 		return lineList, err
 	}
-	if _, err := client.createSendMessage("*", false, "listFile", folder); err != nil {
+	if _, err := client.createSendMessage("*", false, "listFiles", folder); err != nil {
 		return lineList, err
 	}
 	nbOk := 0
-	listMap := make(map[string]string)
+	listMap := make(map[string]byte)
 	t0 := time.Now()
 	for {
 		mes, ok := client.getNextAnswer(1000)
-		if ok { //&& mes.Function == "fileListReturn" {
-			nbOk++
-			//m.pSuccess("nb=%d nbOk=%d mes %v\n", nbOk, client.nbNode, mes)
-			for _, line := range strings.Split(mes.Args[0], "#") {
-				listMap[line] = ""
+		if ok {
+			for _, line := range mes.Args {
+				listMap[line] = 1
 			}
-			if nbOk == client.nbNode {
-				break
+			if mes.Eof {
+				api.info("Node EOF %s\n", mes.Origin)
+				nbOk++
+				if nbOk == client.nbNode {
+					break
+				}
 			}
 		}
 		if time.Now().Sub(t0).Seconds() > 3 {

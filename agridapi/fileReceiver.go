@@ -86,7 +86,7 @@ func (m *fileReceiver) retrieveFileThread(clusterFile string, thread int, nbThre
 		nb := 0
 		for {
 			mes, _ := client.getNextAnswer(0)
-			if mes.Order == -1 {
+			if mes.Eof {
 				m.api.info("Received node %s EOF\n", mes.Origin)
 				nbNodeEnded++
 				if nbNodeEnded >= client.nbNode {

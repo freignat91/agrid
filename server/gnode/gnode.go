@@ -226,7 +226,7 @@ func (g *GNode) sendBackClient(clientId string, mes *AntMes) {
 		logf.error("Send to client error: client %s doesn't exist mes=%v", clientId, mes.Id)
 		return
 	}
-	mes.Origin = g.name
+	//mes.Origin = g.name
 	client.usage++
 	if err := client.stream.Send(mes); err != nil {
 		logf.error("Error trying to send message to client %s: mes=%s: %s\n", clientId, mes.toString(), err)

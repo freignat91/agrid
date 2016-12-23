@@ -36,7 +36,8 @@ message AntMes {
         int32 nb_thread = 22;
         int32 thread = 23;
         int32 duplicate = 24;
-        bytes data = 25;
+        bool eof = 25;
+        bytes data = 26;
 }
 
 message AntRet{

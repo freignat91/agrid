@@ -60,6 +60,21 @@ func (r *MessageReceiver) executeMessage(mes *AntMes) {
 				logf.error("ReveiveBackBlock error: %v\n", err)
 			}
 			return
+		} else if mes.Function == "listFiles" {
+			if err := r.gnode.fileManager.listFiles(mes); err != nil {
+				logf.error("listFiles error: %v\n", err)
+			}
+			return
+		} else if mes.Function == "listNodeFiles" {
+			if err := r.gnode.fileManager.listNodeFiles(mes); err != nil {
+				logf.error("listFiles error: %v\n", err)
+			}
+			return
+		} else if mes.Function == "sendBackListFilesToClient" {
+			if err := r.gnode.fileManager.sendBackListFilesToClient(mes); err != nil {
+				logf.error("sendBackListFilesToClient error: %v\n", err)
+			}
+			return
 		}
 		logf.debugMes(mes, "Executor %d:Received mes: %+v\n", r.id, mes)
 		if err := r.executeFunction(mes); err != nil {

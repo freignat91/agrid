@@ -43,6 +43,9 @@ func (f *FileManager) init(gnode *GNode) {
 	f.transferMap = make(map[string]*FileTransfer)
 }
 
+//-----------------------------------------------------------------------------------------------------------------------------------
+// storeFile
+
 func (f *FileManager) storeFile(req *StoreFileRequest) (*StoreFileRet, error) {
 	f.transferNumber++
 	transfer := &FileTransfer{
@@ -194,6 +197,9 @@ func (f *FileManager) writeBlock(mes *AntMes) error {
 	return nil
 }
 
+//-----------------------------------------------------------------------------------------------------------------------------------
+// removetFile
+
 func (f *FileManager) removeFile(fileName string, recursive bool) string {
 	fullName := path.Join(f.gnode.dataPath, fileName)
 	dir := path.Dir(fullName)
@@ -221,25 +227,58 @@ func (f *FileManager) removeFile(fileName string, recursive bool) string {
 	return "nofile"
 }
 
-func (f *FileManager) listFile(list *string, pathname string) {
-	//fmt.Printf("Dir=%s\n", pathname)
-	lineMap := make(map[string]byte)
+//-----------------------------------------------------------------------------------------------------------------------------------
+// listFile
+
+func (f *FileManager) listFiles(mes *AntMes) error {
+	//logf.info("Received listFile: %v\n", mes)
+	mes.Function = "listNodeFiles"
+	f.gnode.receiverManager.receiveMessage(mes)
+	f.gnode.senderManager.sendMessage(mes)
+	return nil
+}
+
+func (f *FileManager) listNodeFiles(mes *AntMes) error {
+	//logf.info("Received listNodeFile: %v\n", mes)
+	folder := "/"
+	if len(mes.Args) >= 1 {
+		folder = mes.Args[0]
+	}
+	logf.info("Receive listFiles on path %s\n", folder)
+	pathname := path.Join(config.rootDataPath, folder)
+	args := f.listFolder(mes, pathname, []string{})
+	f.sendListFilesBack(mes, args, true)
+	return nil
+}
+
+func (f *FileManager) listFolder(mes *AntMes, pathname string, args []string) []string {
 	files, _ := ioutil.ReadDir(pathname)
 	for _, fl := range files {
 		name := path.Join(pathname, fl.Name())
-		//fmt.Printf("File=%s\n", name)
-		//if strings.HasPrefix(name, fullName) {
 		if strings.HasSuffix(name, GNodeFileSuffixe) {
 			line := f.getTrueName(name)[len(f.gnode.dataPath):]
-			lineMap[line] = 1
+			args = append(args, line)
+			if len(args) >= 100 {
+				f.sendListFilesBack(mes, args, false)
+				args = []string{}
+			}
 		} else {
-			f.listFile(list, name)
+			args = f.listFolder(mes, name, args)
 		}
-		//}
 	}
-	for key, _ := range lineMap {
-		*list = fmt.Sprintf("%s#%s", *list, key)
-	}
+	return args
+}
+
+func (f *FileManager) sendListFilesBack(mes *AntMes, args []string, eof bool) {
+	//logf.info("sendListFilesBack: %v\n", mes)
+	f.gnode.senderManager.sendMessage(&AntMes{
+		Function:   "sendBackListFilesToClient",
+		Target:     mes.Origin,
+		Origin:     f.gnode.name,
+		FromClient: mes.FromClient,
+		Eof:        eof,
+		Args:       args,
+	})
 }
 
 func (f *FileManager) getTrueName(name string) string {
@@ -252,6 +291,15 @@ func (f *FileManager) getTrueName(name string) string {
 	}
 	return tname
 }
+
+func (f *FileManager) sendBackListFilesToClient(mes *AntMes) error {
+	//logf.info("sendBackListFilesToClient: %v\n", mes)
+	f.gnode.sendBackClient(mes.FromClient, mes)
+	return nil
+}
+
+//-----------------------------------------------------------------------------------------------------------------------------------
+// RetrieveFile
 
 func (f *FileManager) retrieveFile(req *RetrieveFileRequest) (*RetrieveFileRet, error) {
 	f.transferNumber++
@@ -329,7 +377,7 @@ func (f *FileManager) sendBlocks(mes *AntMes) error {
 		Target:     mes.Origin,
 		Function:   "sendBackBlock",
 		TransferId: mes.TransferId,
-		Order:      -1,
+		Eof:        true,
 	}
 	f.gnode.senderManager.sendMessage(mesr)
 	return nil
@@ -362,7 +410,7 @@ func (f *FileManager) receivedBackBlock(mes *AntMes) error {
 	transfer.lockAck.Lock()
 	defer transfer.lockAck.Unlock()
 	if _, ok := transfer.orderMap[int(mes.Order)]; !ok {
-		if mes.Order > 0 {
+		if !mes.Eof {
 			transfer.orderMap[int(mes.Order)] = 1
 		}
 		f.gnode.sendBackClient(transfer.clientId, mes)
