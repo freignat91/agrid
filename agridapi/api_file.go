@@ -26,7 +26,7 @@ func (api *AgridAPI) FileLs(folder string) ([]string, error) {
 				listMap[line] = 1
 			}
 			if mes.Eof {
-				api.info("Node EOF %s\n", mes.Origin)
+				api.info("Node EOF %s: %v\n", mes.Origin, mes)
 				nbOk++
 				if nbOk == client.nbNode {
 					break
@@ -39,7 +39,8 @@ func (api *AgridAPI) FileLs(folder string) ([]string, error) {
 	}
 	for key, _ := range listMap {
 		if key != "" {
-			lineList = append(lineList, key)
+			filename := key[len(api.userName)+1:]
+			lineList = append(lineList, filename)
 		}
 	}
 	sort.Strings(lineList)
@@ -66,39 +67,32 @@ func (api *AgridAPI) FileRetrieve(clusterPathname string, localFile string, nbTh
 	return nil
 }
 
-// FileRm remove a file from cluster, returned bool = true if file removed, false if file doesn't exist
-func (api *AgridAPI) FileRm(clusterPathname string, recursive bool) (error, bool) {
+// FileRm remove a file from cluster
+func (api *AgridAPI) FileRm(clusterPathname string, recursive bool) error {
 	client, err := api.getClient()
 	if err != nil {
-		return err, false
+		return err
 	}
-	if _, err := client.createSendMessage("*", false, "removeFile", clusterPathname, fmt.Sprintf("%t", recursive)); err != nil {
-		return err, false
+	if _, err := client.createSendMessage("*", false, "removeFiles", clusterPathname, fmt.Sprintf("%t", recursive)); err != nil {
+		return err
 	}
 	t0 := time.Now()
 	nbOk := 0
-	retMes := "nofile"
 	for {
 		mes, ok := client.getNextAnswer(1000)
 		if ok {
-			nbOk++
-			if mes.Args[0] == "done" && retMes == "nofile" {
-				retMes = "done"
-			} else if mes.Args[0] != "nofile" {
-				retMes = mes.Args[0]
+			api.info("Receive answer: %v\n", mes.Origin)
+			if len(mes.Args) > 0 {
+				return fmt.Errorf("%s", mes.Args[0])
 			}
+			nbOk++
 			if nbOk == client.nbNode {
 				break
 			}
 		}
 		if time.Now().Sub(t0) > time.Second*3 {
-			break
+			return fmt.Errorf("Remove file %s timeout", clusterPathname)
 		}
 	}
-	if retMes == "done" {
-		return nil, true
-	} else if retMes == "nofile" {
-		return nil, false
-	}
-	return fmt.Errorf("remove file %s error: %s\n", clusterPathname, retMes), false
+	return nil
 }

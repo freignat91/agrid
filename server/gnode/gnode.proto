@@ -37,7 +37,9 @@ message AntMes {
         int32 thread = 23;
         int32 duplicate = 24;
         bool eof = 25;
-        bytes data = 26;
+        string user_name = 26;
+        string user_token = 27;
+        bytes data = 28;
 }
 
 message AntRet{
@@ -68,7 +70,9 @@ message StoreFileRequest{
         int64 blockSize = 6;
         string transfer_id = 7;
         string key = 8;
-        repeated string metadata = 9;
+        string user_name = 9;
+        string user_token= 10;
+        repeated string metadata = 11;
 }
 
 message StoreFileRet{
@@ -86,7 +90,9 @@ message RetrieveFileRequest{
         int32 nbThread = 3;
         int32 thread = 4;
         int32 duplicate = 5;
-        string block_list = 6;
+        string user_name = 6;
+        string user_token = 7;
+        string block_list = 8;
 }
 
 message RetrieveFileRet{

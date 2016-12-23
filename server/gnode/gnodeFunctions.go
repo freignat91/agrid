@@ -20,10 +20,12 @@ func initFunctionMap() {
 	functionMap["killNode"] = killNode
 	functionMap["updateGrid"] = updateGrid
 	functionMap["writeStatsInLog"] = writeStatsInLog
-	functionMap["removeFile"] = removeFile
 	functionMap["clear"] = clear
 	functionMap["forceGC"] = forceGC
 	functionMap["getNodeName"] = getNodeName
+	functionMap["createUser"] = createUser
+	functionMap["createNodeUser"] = createNodeUser
+	functionMap["removeUser"] = removeUser
 
 }
 
@@ -105,6 +107,28 @@ func forceGC(g *GNode, verbose bool) {
 	runtime.GC()
 }
 
-func removeFile(g *GNode, fileName string, recursive bool) string {
-	return g.fileManager.removeFile(fileName, recursive)
+func createUser(g *GNode, userName string) string {
+	logf.info("Received create user %s\n", userName)
+	token := g.getToken()
+	args := []string{userName, token}
+	g.senderManager.sendMessage(&AntMes{
+		Target:   "*",
+		Origin:   g.name,
+		Function: "createNodeUser",
+		Args:     args,
+	})
+	return token
+}
+
+func createNodeUser(g *GNode, userName string, token string) string {
+	err := g.createUser(userName, token)
+	if err != nil {
+		return err.Error()
+	}
+	return "done"
+}
+
+func removeUser(g *GNode, userName string) string {
+	logf.info("Remove user %s\n", userName)
+	return ""
 }

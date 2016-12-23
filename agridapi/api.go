@@ -16,6 +16,8 @@ const (
 type AgridAPI struct {
 	serverAddress string
 	logLevel      int
+	userName      string
+	userToken     string
 }
 
 // New create an Agrid api instance
@@ -24,6 +26,7 @@ func New(serverAddress string) *AgridAPI {
 		serverAddress: serverAddress,
 		logLevel:      LOG_WARN,
 	}
+	api.userName = "common"
 	return api
 }
 
@@ -99,4 +102,50 @@ func (api *AgridAPI) formatKey(key string) string {
 		key = key[0:32]
 	}
 	return key
+}
+
+func (api *AgridAPI) SetUser(user string, token string) {
+	if user == "" {
+		api.userName = "default"
+		api.userToken = ""
+		return
+	}
+	api.userName = user
+	api.userToken = token
+}
+
+// CreateUser create an user and return a token
+func (api *AgridAPI) UserCreate(name string) (string, error) {
+	if err := api.verifyUserName(name); err != nil {
+		return "", fmt.Errorf("Invalide user name: %v", err)
+	}
+	client, err := api.getClient()
+	if err != nil {
+		return "", err
+	}
+	ret, errs := client.createSendMessage("*", true, "createUser", name)
+	if err != nil {
+		return "", errs
+	}
+	return ret.Args[0], nil
+}
+
+func (api *AgridAPI) verifyUserName(name string) error {
+	if strings.IndexAny(name, " /\\") >= 0 {
+		return fmt.Errorf("Invalid character")
+	}
+	return nil
+}
+
+// RemoveUser create an user
+func (api *AgridAPI) UserRemove(name string) error {
+	client, err := api.getClient()
+	if err != nil {
+		return err
+	}
+	_, errs := client.createSendMessage("*", true, "removeUser", name)
+	if err != nil {
+		return errs
+	}
+	return nil
 }

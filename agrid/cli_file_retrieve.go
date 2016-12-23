@@ -24,6 +24,8 @@ func init() {
 	FileRetrieveCmd.Flags().Int("thread", 1, "send thread number")
 	FileRetrieveCmd.Flags().String("meta", "", "metadata folowing the file format: name:value, name:value, ...")
 	FileRetrieveCmd.Flags().String("key", "", "AES key to encrypt file, 32 bybes")
+	FileRetrieveCmd.Flags().String("user", "", `set user name`)
+	FileRetrieveCmd.Flags().String("token", "", `set user token`)
 }
 
 func (m *agridCLI) fileRetrieve(cmd *cobra.Command, args []string) error {
@@ -42,6 +44,7 @@ func (m *agridCLI) fileRetrieve(cmd *cobra.Command, args []string) error {
 
 	api := agridapi.New(m.server)
 	m.setAPILogLevel(api)
+	api.SetUser(cmd.Flag("user").Value.String(), cmd.Flag("token").Value.String())
 	if err := api.FileRetrieve(clusterFile, localFile, nbThread, key); err != nil {
 		return err
 	}

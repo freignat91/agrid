@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"io/ioutil"
+	"math/rand"
 	"net"
 	"os"
+	"path"
 	"sync"
 	"time"
 )
@@ -250,4 +253,29 @@ func (g *GNode) startReorganizer() {
 			g.fileManager.moveRandomBlock()
 		}
 	}()
+}
+
+func (g *GNode) getToken() string {
+	rand.Seed(time.Now().UnixNano())
+	b := make([]byte, 32)
+	rand.Read(b)
+	return fmt.Sprintf("%x", b)
+}
+
+func (g *GNode) createUser(userName string, token string) error {
+	logf.info("Create user %s\n", userName)
+	_, err := ioutil.ReadDir(path.Join(config.rootDataPath, userName))
+	if err == nil {
+		return fmt.Errorf("User %s already exist", userName)
+	}
+	os.MkdirAll(path.Join(config.rootDataPath, userName), os.ModeDir)
+	file, errc := os.Create(path.Join(config.rootDataPath, userName, "token"))
+	if errc != nil {
+		return errc
+	}
+	if _, err := file.WriteString(token); err != nil {
+		return err
+	}
+	file.Close()
+	return nil
 }

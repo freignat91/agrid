@@ -67,12 +67,40 @@ func (r *MessageReceiver) executeMessage(mes *AntMes) {
 			return
 		} else if mes.Function == "listNodeFiles" {
 			if err := r.gnode.fileManager.listNodeFiles(mes); err != nil {
-				logf.error("listFiles error: %v\n", err)
+				logf.error("listNodeFiles error: %v\n", err)
 			}
 			return
 		} else if mes.Function == "sendBackListFilesToClient" {
 			if err := r.gnode.fileManager.sendBackListFilesToClient(mes); err != nil {
 				logf.error("sendBackListFilesToClient error: %v\n", err)
+			}
+			return
+		} else if mes.Function == "removeFiles" {
+			if err := r.gnode.fileManager.removeFiles(mes); err != nil {
+				logf.error("removeFiles error: %v\n", err)
+			}
+			return
+		} else if mes.Function == "removeNodeFiles" {
+			if err := r.gnode.fileManager.removeNodeFiles(mes); err != nil {
+				logf.error("removeNodeFiles error: %v\n", err)
+				r.gnode.senderManager.sendMessage(&AntMes{
+					Target:     mes.Origin,
+					Function:   "sendBackRemoveFilesToClient",
+					FromClient: mes.FromClient,
+					Args:       []string{err.Error()},
+					Eof:        true,
+				})
+			}
+			r.gnode.senderManager.sendMessage(&AntMes{
+				Target:     mes.Origin,
+				Function:   "sendBackRemoveFilesToClient",
+				FromClient: mes.FromClient,
+				Eof:        true,
+			})
+			return
+		} else if mes.Function == "sendBackRemoveFilesToClient" {
+			if err := r.gnode.fileManager.sendBackRemoveFilesToClient(mes); err != nil {
+				logf.error("sendBackRemoveFilesToClient error: %v\n", err)
 			}
 			return
 		}
