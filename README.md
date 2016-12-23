@@ -1,6 +1,6 @@
 # AGRID
 
-Agrid v0.1.1 experimental
+Agrid v0.1.2 experimental
 
 # Purpose
 
