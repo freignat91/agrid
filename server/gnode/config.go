@@ -40,7 +40,7 @@ func (cfg *GNodeConfig) setDefault() {
 	cfg.bufferSize = 10000
 	cfg.parallelReceiver = 100
 	cfg.parallelSender = 100
-	cfg.nbDuplicate = 1
+	cfg.nbDuplicate = 3
 	cfg.nbDuplicateAck = 1
 	cfg.rootDataPath = "/data"
 	cfg.tracePersistence = 200

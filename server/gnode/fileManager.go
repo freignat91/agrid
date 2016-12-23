@@ -86,7 +86,7 @@ func (f *FileManager) receiveBlocFromClient(mes *AntMes) error {
 			NbBlockTotal: transfer.nbBlockTotal,
 			Size:         mes.Size,
 			TargetedPath: transfer.path,
-			Replicas:     int32(nn + 1),
+			Duplicate:    int32(nn + 1),
 			Args:         transfer.metadata,
 			Data:         data,
 		}
@@ -162,7 +162,7 @@ func (f *FileManager) storeBlock(mes *AntMes) error {
 }
 
 func (f *FileManager) writeBlock(mes *AntMes) error {
-	dir := fmt.Sprintf("%s/%s.%d%s", f.gnode.dataPath, mes.TargetedPath, mes.Replicas, GNodeFileSuffixe)
+	dir := fmt.Sprintf("%s/%s.%d%s", f.gnode.dataPath, mes.TargetedPath, mes.Duplicate, GNodeFileSuffixe)
 	os.MkdirAll(dir, os.ModeDir)
 	name := fmt.Sprintf("b.%d.%d", mes.Order, mes.NbBlockTotal)
 	//logf.info("writeblock: %s / %s\n", dir, name)
@@ -272,11 +272,12 @@ func (f *FileManager) retrieveFile(req *RetrieveFileRequest) (*RetrieveFileRet, 
 		Function:     "getFileBlocks",
 		TargetedPath: req.Name,
 		TransferId:   transferId,
-		Replicas:     1,
 		NbThread:     req.NbThread,
 		Thread:       req.Thread,
+		Duplicate:    req.Duplicate,
 	}
 	mes.Origin = f.gnode.name
+	mes.Args = []string{req.BlockList}
 	f.gnode.receiverManager.receiveMessage(mes)
 	f.gnode.senderManager.sendMessage(mes)
 	return &RetrieveFileRet{TransferId: transferId}, nil
@@ -284,9 +285,10 @@ func (f *FileManager) retrieveFile(req *RetrieveFileRequest) (*RetrieveFileRet, 
 
 func (f *FileManager) sendBlocks(mes *AntMes) error {
 	//logf.info("sendBlock: %s\n", mes.toString())
-	fileName := fmt.Sprintf("%s/%s.%d%s", f.gnode.dataPath, mes.TargetedPath, mes.Replicas, GNodeFileSuffixe)
+	fileName := fmt.Sprintf("%s/%s.%d%s", f.gnode.dataPath, mes.TargetedPath, mes.Duplicate, GNodeFileSuffixe)
 	nbThread := int(mes.NbThread)
 	thread := int(mes.Thread)
+	blockList := mes.Args[0]
 	files, _ := ioutil.ReadDir(fileName)
 	for _, fl := range files {
 		if fl.Name() != "meta" {
@@ -294,7 +296,7 @@ func (f *FileManager) sendBlocks(mes *AntMes) error {
 			if err != nil {
 				logf.error("Error extracting data from name: %v\n", err)
 			} else {
-				if order%nbThread == thread {
+				if order%nbThread == thread && (blockList == "" || strings.Index(blockList, fmt.Sprintf("#%d#", order)) >= 0) {
 					name := path.Join(fileName, fl.Name())
 					rfile, err := os.Open(name)
 					if err != nil {
@@ -322,6 +324,14 @@ func (f *FileManager) sendBlocks(mes *AntMes) error {
 			}
 		}
 	}
+	mesr := &AntMes{
+		Origin:     f.gnode.name,
+		Target:     mes.Origin,
+		Function:   "sendBackBlock",
+		TransferId: mes.TransferId,
+		Order:      -1,
+	}
+	f.gnode.senderManager.sendMessage(mesr)
 	return nil
 }
 
@@ -352,7 +362,9 @@ func (f *FileManager) receivedBackBlock(mes *AntMes) error {
 	transfer.lockAck.Lock()
 	defer transfer.lockAck.Unlock()
 	if _, ok := transfer.orderMap[int(mes.Order)]; !ok {
-		transfer.orderMap[int(mes.Order)] = 1
+		if mes.Order > 0 {
+			transfer.orderMap[int(mes.Order)] = 1
+		}
 		f.gnode.sendBackClient(transfer.clientId, mes)
 	}
 	return nil

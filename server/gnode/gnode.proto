@@ -28,14 +28,14 @@ message AntMes {
         int64 order = 14;
         int64 nb_block_total = 15;
         int64 nb_block = 16;
-        int32 replicas = 17;
-        int64 size = 18;
-        string targeted_path = 19;
-        bool no_blocking = 20;
-        bool debug = 21;
-        bool answer_wait = 22;
-        int32 nb_thread = 23;
-        int32 thread = 24;
+        int64 size = 17;
+        string targeted_path = 18;
+        bool no_blocking = 19;
+        bool debug = 20;
+        bool answer_wait = 21;
+        int32 nb_thread = 22;
+        int32 thread = 23;
+        int32 duplicate = 24;
         bytes data = 25;
 }
 
@@ -48,7 +48,8 @@ message PingRet{
         string host = 1;
         string name = 2;
         int32 nb_node = 3;
-        int32 client_number = 4;
+        int32 nb_duplicate = 4;
+        int32 client_number = 5;
 }
 
 message AskConnectionRequest{
@@ -83,6 +84,8 @@ message RetrieveFileRequest{
         string name = 2;
         int32 nbThread = 3;
         int32 thread = 4;
+        int32 duplicate = 5;
+        string block_list = 6;
 }
 
 message RetrieveFileRet{

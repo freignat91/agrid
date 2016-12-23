@@ -10,9 +10,7 @@ import (
 	"time"
 )
 
-//TODO: limit idMap size
 //TODO: ramasse miette sur les objet transfer non terminé apres moult
-//TODO: utiliser le client mes return pour afficher % storage
 
 var (
 	config GNodeConfig     = GNodeConfig{}

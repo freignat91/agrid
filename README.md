@@ -57,8 +57,6 @@ For resilience reason, it's better to have a separated disk file system for each
 
 If a node crash (agrid itself, or disk file system failure or VM failure), docker will restart the node. When the new node restart, it will try to get it's previous file system or ask the other nodes to resend the blocks he handles (this last part is targeted for 0.1.2 version)
 
-From time to time, Agrid reorganizes the file block locations, verifying this way they are still readable and rewrites them from copies if is not the case (targeted for 0.1.1 version)
-
 ## Scale out
 
 To scale out the number of nodes, it's enough to use `docker service scale agrid=xxx` command. Agrid will recompute its grid recreating all the node connections accordingly to the number of nodes
@@ -99,6 +97,8 @@ Agrid command lines implemented using the Agrid Go API
 
 
 ### retrieve a file from cluster
+
+Retrieve a file from cluster using duplicated blocks if some are missing
 
 `agrid file retrieve [source] [target] <--key>`
 - [source]: the full pathname of the file to get in cluster
