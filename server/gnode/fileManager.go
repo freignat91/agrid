@@ -49,6 +49,9 @@ func (f *FileManager) init(gnode *GNode) {
 // storeFile
 
 func (f *FileManager) storeFile(req *StoreFileRequest) (*StoreFileRet, error) {
+	if !f.gnode.checkUser(req.UserName, req.UserToken) {
+		return nil, fmt.Errorf("Invalid user/token")
+	}
 	f.transferNumber++
 	transfer := &FileTransfer{
 		clientId:      req.ClientId,
@@ -207,6 +210,9 @@ func (f *FileManager) writeBlock(mes *AntMes) error {
 // removetFile
 
 func (f *FileManager) removeFiles(mes *AntMes) error {
+	if !f.gnode.checkUser(mes.UserName, mes.UserToken) {
+		return fmt.Errorf("Invalid user/token")
+	}
 	logf.info("Received removeFiles: %v\n", mes)
 	mes.Function = "removeNodeFiles"
 	mes.Target = "*"
@@ -270,6 +276,9 @@ func (f *FileManager) sendBackRemoveFilesToClient(mes *AntMes) error {
 // listFile
 
 func (f *FileManager) listFiles(mes *AntMes) error {
+	if !f.gnode.checkUser(mes.UserName, mes.UserToken) {
+		return fmt.Errorf("Invalid user/token")
+	}
 	//logf.info("Received listFile: %v\n", mes)
 	mes.Function = "listNodeFiles"
 	mes.Target = "*"
@@ -342,6 +351,9 @@ func (f *FileManager) sendBackListFilesToClient(mes *AntMes) error {
 // RetrieveFile
 
 func (f *FileManager) retrieveFile(req *RetrieveFileRequest) (*RetrieveFileRet, error) {
+	if !f.gnode.checkUser(req.UserName, req.UserToken) {
+		return nil, fmt.Errorf("Invalid user/token")
+	}
 	f.transferNumber++
 	md5 := md5.New()
 	io.WriteString(md5, req.Name)

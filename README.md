@@ -55,7 +55,7 @@ For resilience reason, it's better to have a separated disk file system for each
 
 ## Node crash
 
-If a node crash (agrid itself, or disk file system failure or VM failure), docker will restart the node. When the new node restart, it will try to get it's previous file system or ask the other nodes to resend the blocks he handles (this last part is targeted for 0.1.2 version)
+If a node crash (agrid itself, or disk file system failure or VM failure), docker will restart the node. When the new node restart, it will try to get it's previous file system or ask the other nodes to resend the blocks he handles (this last part is targeted for 0.1.4 version)
 
 ## Scale out
 
@@ -245,4 +245,3 @@ List the node of the cluster
 
 Agrid is licensed under the Apache License, Version 2.0. See https://github.com/freignat91/agrid/blob/master/LICENSE
 for the full license text.
-

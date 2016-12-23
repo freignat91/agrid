@@ -46,6 +46,7 @@ type GNode struct {
 	fileManager     *FileManager
 	lockId          sync.RWMutex
 	dataPath        string
+	userMap         map[string]string
 }
 
 type gnodeTarget struct {
@@ -94,7 +95,8 @@ func (g *GNode) init() {
 	g.clientMap = make(map[string]*gnodeClient)
 	g.targetMap = make(map[string]*gnodeTarget)
 	g.nbNode = config.nbNode
-	g.dataPath = "/data"
+	g.dataPath = config.rootDataPath
+	g.loadUser()
 	g.idMap.Init()
 	g.fileManager = &FileManager{}
 	g.fileManager.init(g)
@@ -277,5 +279,42 @@ func (g *GNode) createUser(userName string, token string) error {
 		return err
 	}
 	file.Close()
+	g.userMap[userName] = token
 	return nil
+}
+
+func (g *GNode) loadUser() error {
+	g.userMap = make(map[string]string)
+	dir := path.Join(config.rootDataPath)
+	fileList, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	data := make([]byte, 64, 64)
+	for _, fd := range fileList {
+		f, err := os.Open(path.Join(dir, fd.Name(), "token"))
+		if err == nil {
+			_, errR := f.Read(data)
+			if errR == nil {
+				token := string(data)
+				logf.info("Add user %s\n", fd.Name())
+				g.userMap[fd.Name()] = token
+			}
+		}
+	}
+	return nil
+}
+
+func (g *GNode) checkUser(user string, token string) bool {
+	if user == "" || user == "common" {
+		return true
+	}
+	check, ok := g.userMap[user]
+	if !ok {
+		return false
+	}
+	if token == check {
+		return true
+	}
+	return false
 }
