@@ -76,6 +76,11 @@ To simulate nodes connections using different parameters as, node number, line c
 
 this command as not effect on the real cluster grid connections
 
+## Users
+
+Agrid use a "common" file space by default, everyone can access to this space, even if files can be encrypted. It's possible to create a user. A user create a dedicated file space no one can access except the user. A user can see and act only on its own file space.
+To authenticate a user a token a given at user creation by the cluster, this token should be provided for all commands used with a user.
+
 
 # CLI
 

@@ -104,9 +104,10 @@ func (api *AgridAPI) formatKey(key string) string {
 	return key
 }
 
+// SetUser define the current user
 func (api *AgridAPI) SetUser(user string, token string) {
 	if user == "" {
-		api.userName = "default"
+		api.userName = "common"
 		api.userToken = ""
 		return
 	}
@@ -114,7 +115,7 @@ func (api *AgridAPI) SetUser(user string, token string) {
 	api.userToken = token
 }
 
-// CreateUser create an user and return a token
+// UserCreate create an user and return a token
 func (api *AgridAPI) UserCreate(name string) (string, error) {
 	if err := api.verifyUserName(name); err != nil {
 		return "", fmt.Errorf("Invalide user name: %v", err)
@@ -137,7 +138,7 @@ func (api *AgridAPI) verifyUserName(name string) error {
 	return nil
 }
 
-// RemoveUser create an user
+// UserRemove create an user
 func (api *AgridAPI) UserRemove(name string) error {
 	client, err := api.getClient()
 	if err != nil {
