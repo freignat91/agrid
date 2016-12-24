@@ -146,12 +146,48 @@ func (n *nodeFunctions) createNodeUser(mes *AntMes) error {
 	if err != nil {
 		return err
 	}
+	n.gnode.senderManager.sendMessage(&AntMes{
+		Target:   "*",
+		Origin:   n.gnode.name,
+		Function: "removeNodeUser",
+		Args:     []string{userName, token},
+	})
+	return nil
+}
+
+func (n *nodeFunctions) removeUser(mes *AntMes) error {
+	if len(mes.Args) < 3 {
+		return fmt.Errorf("Number of argument error, need userName token")
+	}
+	userName := mes.Args[0]
+	token := mes.Args[1]
+	force := false
+	if mes.Args[2] == "true" {
+		force = true
+	}
+	err := n.gnode.removeUser(userName, token, force)
+	if err != nil {
+		return err
+	}
 	answer := n.gnode.createAnswer(mes)
 	answer.Args = []string{token}
 	n.gnode.senderManager.sendMessage(answer)
 	return nil
 }
 
-func (n *nodeFunctions) removeUser(mes *AntMes) error {
-	return fmt.Errorf("remove user not implemented yet")
+func (n *nodeFunctions) removeNodeUser(mes *AntMes) error {
+	if len(mes.Args) < 3 {
+		return fmt.Errorf("Number of argument error, need userName token")
+	}
+	userName := mes.Args[0]
+	token := mes.Args[1]
+	force := false
+	if mes.Args[2] == "true" {
+		force = true
+	}
+	err := n.gnode.removeUser(userName, token, force)
+	if err != nil {
+		return err
+	}
+	return nil
 }

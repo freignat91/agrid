@@ -20,17 +20,23 @@ var UserRemoveCmd = &cobra.Command{
 
 func init() {
 	UserCmd.AddCommand(UserRemoveCmd)
+	UserRemoveCmd.Flags().Bool("force", false, `WARNING: force to removce user with its associated files`)
 }
 
 func (m *agridCLI) userRemove(cmd *cobra.Command, args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("Needs user name as first argument")
+	if len(args) < 2 {
+		return fmt.Errorf("Error number of argument, needs [userName] [token]")
 	}
 	user := args[0]
+	token := args[1]
+	force := false
+	if cmd.Flag("force").Value.String() == "true" {
+		force = true
+	}
 	m.pInfo("Execute: Remove user %s\n", user)
 	api := agridapi.New(m.server)
 	m.setAPILogLevel(api)
-	if err := api.UserRemove(user); err != nil {
+	if err := api.UserRemove(user, token, force); err != nil {
 		return err
 	}
 	m.pSuccess("User removed %s\n", user)

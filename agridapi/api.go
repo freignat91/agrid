@@ -146,13 +146,13 @@ func (api *AgridAPI) verifyUserName(name string) error {
 }
 
 // UserRemove create an user
-func (api *AgridAPI) UserRemove(name string) error {
+func (api *AgridAPI) UserRemove(name string, token string, force bool) error {
 	client, err := api.getClient()
 	if err != nil {
 		return err
 	}
-	_, errs := client.createSendMessage("*", true, "removeUser", name)
-	if err != nil {
+	_, errs := client.createSendMessage("*", true, "removeUser", name, token, fmt.Sprintf("%t", force))
+	if errs != nil {
 		return errs
 	}
 	return nil

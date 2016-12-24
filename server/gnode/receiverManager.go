@@ -44,6 +44,7 @@ func (m *ReceiverManager) loadFunctions() {
 	m.functionMap["createUser"] = m.gnode.nodeFunctions.createUser
 	m.functionMap["createNodeUser"] = m.gnode.nodeFunctions.createNodeUser
 	m.functionMap["removeUser"] = m.gnode.nodeFunctions.removeUser
+	m.functionMap["removeNodeUser"] = m.gnode.nodeFunctions.removeNodeUser
 }
 
 func (m *ReceiverManager) start(gnode *GNode, bufferSize int, maxGoRoutine int) {

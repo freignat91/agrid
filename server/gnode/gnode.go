@@ -301,6 +301,33 @@ func (g *GNode) createUser(userName string, token string) error {
 	return nil
 }
 
+func (g *GNode) removeUser(userName string, token string, force bool) error {
+	if !g.checkUser(userName, token) {
+		return fmt.Errorf("Invalid user/token")
+	}
+	logf.warn("Remove user %s force mode=%t\n", userName, force)
+	dir := path.Join(config.rootDataPath)
+	fileList, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	exist := false
+	for _, fd := range fileList {
+		if fd.Name() != "token" && fd.Name() != "meta" {
+			exist = true
+			break
+		}
+	}
+	if exist && !force {
+		return fmt.Errorf("Impossible to remove user %s files still exist (use --force", userName)
+	}
+	if err := os.RemoveAll(path.Join(config.rootDataPath, userName)); err != nil {
+		return err
+	}
+	delete(g.userMap, userName)
+	return nil
+}
+
 func (g *GNode) loadUser() error {
 	g.userMap = make(map[string]string)
 	dir := path.Join(config.rootDataPath)
@@ -315,7 +342,7 @@ func (g *GNode) loadUser() error {
 			n, errR := f.Read(data)
 			if errR == nil {
 				token := string(data[0 : n-1])
-				logf.info("Add user %s token=[%s]\n", fd.Name(), token)
+				logf.info("Add user %s\n", fd.Name())
 				g.userMap[fd.Name()] = token
 			}
 		}
