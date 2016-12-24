@@ -77,6 +77,8 @@ func (m *fileSender) storeFile(fileName string, target string, pMeta *[]string, 
 			Metadata:     meta,
 			BlockSize:    int64(blockSize * 1024),
 			Key:          key,
+			UserName:     m.api.userName,
+			UserToken:    m.api.userToken,
 		})
 		if err != nil {
 			return err

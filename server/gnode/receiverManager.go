@@ -16,10 +16,40 @@ type ReceiverManager struct {
 	receiver     MessageReceiver
 	answerMap    map[string]*AntMes
 	getChan      chan string
+	functionMap  map[string]interface{}
+}
+
+func (m *ReceiverManager) loadFunctions() {
+	m.functionMap = make(map[string]interface{})
+	//file functions
+	m.functionMap["storeBlock"] = m.gnode.fileManager.storeBlock
+	m.functionMap["storeBlocAck"] = m.gnode.fileManager.storeBlockAck
+	m.functionMap["getFileBlocks"] = m.gnode.fileManager.sendBlocks
+	m.functionMap["sendBackBlock"] = m.gnode.fileManager.receivedBackBlock
+	m.functionMap["listFiles"] = m.gnode.fileManager.listFiles
+	m.functionMap["listNodeFiles"] = m.gnode.fileManager.listNodeFiles
+	m.functionMap["sendBackListFilesToClient"] = m.gnode.fileManager.sendBackListFilesToClient
+	m.functionMap["removeFiles"] = m.gnode.fileManager.removeFiles
+	m.functionMap["removeNodeFiles"] = m.gnode.fileManager.removeNodeFiles
+	m.functionMap["sendBackRemoveFilesToClient"] = m.gnode.fileManager.sendBackRemoveFilesToClient
+	//node Functions
+	m.functionMap["ping"] = m.gnode.nodeFunctions.ping
+	m.functionMap["pingFromTo"] = m.gnode.nodeFunctions.pingFromTo
+	m.functionMap["setLogLevel"] = m.gnode.nodeFunctions.setLogLevel
+	m.functionMap["killNode"] = m.gnode.nodeFunctions.killNode
+	m.functionMap["updateGrid"] = m.gnode.nodeFunctions.updateGrid
+	m.functionMap["writeStatsInLog"] = m.gnode.nodeFunctions.writeStatsInLog
+	m.functionMap["clear"] = m.gnode.nodeFunctions.clear
+	m.functionMap["getConnections"] = m.gnode.nodeFunctions.getConnections
+	m.functionMap["createUser"] = m.gnode.nodeFunctions.createUser
+	m.functionMap["createNodeUser"] = m.gnode.nodeFunctions.createNodeUser
+	m.functionMap["removeUser"] = m.gnode.nodeFunctions.removeUser
+	m.functionMap["removeNodeUser"] = m.gnode.nodeFunctions.removeNodeUser
 }
 
 func (m *ReceiverManager) start(gnode *GNode, bufferSize int, maxGoRoutine int) {
 	m.gnode = gnode
+	m.loadFunctions()
 	m.nbReceiver = maxGoRoutine
 	m.buffer.init(bufferSize)
 	m.ioChan = make(chan *AntMes)
@@ -111,7 +141,7 @@ func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamS
 				Function: "forceGC",
 				Args:     []string{"true"},
 			})
-			forceGC(m.gnode, true)
+			m.gnode.nodeFunctions.forceGC()
 			return
 		}
 		if err != nil {
@@ -122,7 +152,7 @@ func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamS
 				Function: "forceGC",
 				Args:     []string{"true"},
 			})
-			forceGC(m.gnode, true)
+			m.gnode.nodeFunctions.forceGC()
 			return
 		}
 		if mes.Function == "sendBlock" {

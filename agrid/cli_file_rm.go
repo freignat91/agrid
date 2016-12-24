@@ -21,6 +21,7 @@ var FileRmCmd = &cobra.Command{
 func init() {
 	FileCmd.AddCommand(FileRmCmd)
 	FileRmCmd.Flags().BoolP("recursive", "r", false, `remomve all files under a directory`)
+	FileRmCmd.Flags().String("user", "", `set user name`)
 }
 
 func (m *agridCLI) fileRemove(cmd *cobra.Command, args []string) error {
@@ -36,15 +37,13 @@ func (m *agridCLI) fileRemove(cmd *cobra.Command, args []string) error {
 	t0 := time.Now()
 	api := agridapi.New(m.server)
 	m.setAPILogLevel(api)
+	api.SetUser(cmd.Flag("user").Value.String())
 
-	err, done := api.FileRm(fileName, recursive)
+	err := api.FileRm(fileName, recursive)
 	t1 := time.Now()
 	if err != nil {
 		return err
-	} else if done {
-		m.pSuccess("File %s removed time=%dms\n", fileName, t1.Sub(t0).Nanoseconds()/1000000)
-	} else {
-		m.pWarn("File %s not found time=%dms\n", fileName, t1.Sub(t0).Nanoseconds()/1000000)
 	}
+	m.pSuccess("File %s removed time=%dms\n", fileName, t1.Sub(t0).Nanoseconds()/1000000)
 	return nil
 }

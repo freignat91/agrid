@@ -36,6 +36,8 @@ type FileTransfer struct {
 	terminated    bool
 	blockSize     int64
 	metadata      []string
+	userName      string
+	userToken     string
 }
 
 func (f *FileManager) init(gnode *GNode) {
@@ -47,6 +49,9 @@ func (f *FileManager) init(gnode *GNode) {
 // storeFile
 
 func (f *FileManager) storeFile(req *StoreFileRequest) (*StoreFileRet, error) {
+	if !f.gnode.checkUser(req.UserName, req.UserToken) {
+		return nil, fmt.Errorf("Invalid user/token")
+	}
 	f.transferNumber++
 	transfer := &FileTransfer{
 		clientId:      req.ClientId,
@@ -60,6 +65,8 @@ func (f *FileManager) storeFile(req *StoreFileRequest) (*StoreFileRet, error) {
 		lockAck:       sync.RWMutex{},
 		lastClientMes: time.Now(),
 		metadata:      req.Metadata,
+		userName:      req.UserName,
+		userToken:     req.UserToken,
 	}
 	f.transferMap[req.TransferId] = transfer
 	logf.info("sendFile received: req=%+v\n", req)
@@ -92,6 +99,8 @@ func (f *FileManager) receiveBlocFromClient(mes *AntMes) error {
 			Duplicate:    int32(nn + 1),
 			Args:         transfer.metadata,
 			Data:         data,
+			UserName:     transfer.userName,
+			UserToken:    transfer.userToken,
 		}
 		//logf.info("Send client order %d to %s\n", mes.Order, f.gnode.nodeNameList[pos])
 		f.gnode.senderManager.sendMessage(block)
@@ -165,7 +174,7 @@ func (f *FileManager) storeBlock(mes *AntMes) error {
 }
 
 func (f *FileManager) writeBlock(mes *AntMes) error {
-	dir := fmt.Sprintf("%s/%s.%d%s", f.gnode.dataPath, mes.TargetedPath, mes.Duplicate, GNodeFileSuffixe)
+	dir := fmt.Sprintf("%s.%d%s", path.Join(f.gnode.dataPath, mes.UserName, mes.TargetedPath), mes.Duplicate, GNodeFileSuffixe)
 	os.MkdirAll(dir, os.ModeDir)
 	name := fmt.Sprintf("b.%d.%d", mes.Order, mes.NbBlockTotal)
 	//logf.info("writeblock: %s / %s\n", dir, name)
@@ -200,49 +209,98 @@ func (f *FileManager) writeBlock(mes *AntMes) error {
 //-----------------------------------------------------------------------------------------------------------------------------------
 // removetFile
 
-func (f *FileManager) removeFile(fileName string, recursive bool) string {
-	fullName := path.Join(f.gnode.dataPath, fileName)
-	dir := path.Dir(fullName)
-	files, _ := ioutil.ReadDir(dir)
-	logf.debug("removeFile searching in dir %s\n", dir)
-	for _, fl := range files {
-		name := path.Join(dir, fl.Name())
-		logf.debug("removeFile found file: %s\n", name)
-		tname := f.getTrueName(name)
-		if tname == fullName {
-			if !recursive && !strings.HasSuffix(name, GNodeFileSuffixe) {
-				ret := fmt.Sprintf("Trying to remove a directory %s without recusive flag set", name)
-				logf.warn("%s\n", ret)
-				return ret
-			}
-			if err := os.RemoveAll(name); err != nil {
-				ret := fmt.Sprintf("Error removing file %s: %v", name, err)
-				logf.error("%s\n", ret)
-				return ret
-			}
-			logf.info("file %s removed\n", name)
-			return "done"
+func (f *FileManager) removeFiles(mes *AntMes) error {
+	if !f.gnode.checkUser(mes.UserName, mes.UserToken) {
+		return fmt.Errorf("Invalid user/token")
+	}
+	logf.info("Received removeFiles: %v\n", mes)
+	mes.Function = "removeNodeFiles"
+	mes.Target = "*"
+	f.gnode.receiverManager.receiveMessage(mes)
+	f.gnode.senderManager.sendMessage(mes)
+	return nil
+}
+
+func (f *FileManager) removeNodeFiles(mes *AntMes) error {
+	logf.info("Received removeNodeFiles: %v\n", mes)
+	filename := ""
+	if len(mes.Args) >= 1 {
+		filename = mes.Args[0]
+	}
+	recursive := false
+	if len(mes.Args) >= 2 && mes.Args[1] == "true" {
+		recursive = true
+	}
+	fullName := path.Join(f.gnode.dataPath, mes.UserName, filename)
+	logf.info("fuleName: %s\n", fullName)
+	if _, err := os.Stat(fullName); err == nil {
+		logf.info("does exist: %s\n", fullName)
+		if !recursive {
+			return fmt.Errorf("Trying to remove a directory %s without recusive flag set", filename)
+		}
+		logf.info("remove all dir\n")
+		if err := os.RemoveAll(fullName); err != nil {
+			return err
+		}
+	} else {
+		logf.info("remove all file\n")
+		if err := f.removeAgridFiles(fullName); err != nil {
+			return err
 		}
 	}
-	return "nofile"
+	f.gnode.senderManager.sendMessage(&AntMes{
+		Target:     mes.Origin,
+		Function:   "sendBackRemoveFilesToClient",
+		FromClient: mes.FromClient,
+		Eof:        true,
+	})
+	return nil
+}
+
+func (f *FileManager) removeAgridFiles(fullname string) error {
+	dir := path.Dir(fullname)
+	name := path.Base(fullname)
+	fileList, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, file := range fileList {
+		if strings.HasPrefix(file.Name(), name) && strings.HasSuffix(file.Name(), GNodeFileSuffixe) {
+			logf.info("remove: %s/%s\n", dir, file.Name())
+			if err := os.RemoveAll(path.Join(dir, file.Name())); err != nil {
+				return err
+			}
+
+		}
+	}
+	return nil
+}
+
+func (f *FileManager) sendBackRemoveFilesToClient(mes *AntMes) error {
+	f.gnode.sendBackClient(mes.FromClient, mes)
+	return nil
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------------
 // listFile
 
 func (f *FileManager) listFiles(mes *AntMes) error {
+	if !f.gnode.checkUser(mes.UserName, mes.UserToken) {
+		return fmt.Errorf("Invalid user/token")
+	}
 	//logf.info("Received listFile: %v\n", mes)
 	mes.Function = "listNodeFiles"
+	mes.Target = "*"
 	f.gnode.receiverManager.receiveMessage(mes)
 	f.gnode.senderManager.sendMessage(mes)
 	return nil
 }
 
 func (f *FileManager) listNodeFiles(mes *AntMes) error {
-	//logf.info("Received listNodeFile: %v\n", mes)
-	folder := "/"
+	logf.info("Received listNodeFile: %v\n", mes)
+	folder := mes.UserName
 	if len(mes.Args) >= 1 {
-		folder = mes.Args[0]
+		folder = path.Join(mes.UserName, mes.Args[0])
 	}
 	logf.info("Receive listFiles on path %s\n", folder)
 	pathname := path.Join(config.rootDataPath, folder)
@@ -302,6 +360,9 @@ func (f *FileManager) sendBackListFilesToClient(mes *AntMes) error {
 // RetrieveFile
 
 func (f *FileManager) retrieveFile(req *RetrieveFileRequest) (*RetrieveFileRet, error) {
+	if !f.gnode.checkUser(req.UserName, req.UserToken) {
+		return nil, fmt.Errorf("Invalid user/token")
+	}
 	f.transferNumber++
 	md5 := md5.New()
 	io.WriteString(md5, req.Name)
@@ -323,6 +384,8 @@ func (f *FileManager) retrieveFile(req *RetrieveFileRequest) (*RetrieveFileRet, 
 		NbThread:     req.NbThread,
 		Thread:       req.Thread,
 		Duplicate:    req.Duplicate,
+		UserName:     req.UserName,
+		UserToken:    req.UserToken,
 	}
 	mes.Origin = f.gnode.name
 	mes.Args = []string{req.BlockList}
@@ -333,7 +396,7 @@ func (f *FileManager) retrieveFile(req *RetrieveFileRequest) (*RetrieveFileRet, 
 
 func (f *FileManager) sendBlocks(mes *AntMes) error {
 	//logf.info("sendBlock: %s\n", mes.toString())
-	fileName := fmt.Sprintf("%s/%s.%d%s", f.gnode.dataPath, mes.TargetedPath, mes.Duplicate, GNodeFileSuffixe)
+	fileName := fmt.Sprintf("%s.%d%s", path.Join(f.gnode.dataPath, mes.UserName, mes.TargetedPath), mes.Duplicate, GNodeFileSuffixe)
 	nbThread := int(mes.NbThread)
 	thread := int(mes.Thread)
 	blockList := mes.Args[0]

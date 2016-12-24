@@ -1,6 +1,6 @@
 # AGRID
 
-Agrid v0.1.1 experimental
+Agrid v0.1.2 experimental
 
 # Purpose
 
@@ -55,7 +55,7 @@ For resilience reason, it's better to have a separated disk file system for each
 
 ## Node crash
 
-If a node crash (agrid itself, or disk file system failure or VM failure), docker will restart the node. When the new node restart, it will try to get it's previous file system or ask the other nodes to resend the blocks he handles (this last part is targeted for 0.1.2 version)
+If a node crash (agrid itself, or disk file system failure or VM failure), docker will restart the node. When the new node restart, it will try to get it's previous file system or ask the other nodes to resend the blocks he handles (this last part is targeted for 0.1.4 version)
 
 ## Scale out
 
@@ -76,24 +76,39 @@ To simulate nodes connections using different parameters as, node number, line c
 
 this command as not effect on the real cluster grid connections
 
+## Users
 
-# Users (targeted for version 0.1.2)
- 
-Agrid can share its storage between users. Each user got a home folder to store exclusively its own files and an optional token to authenticate onto the server.
+Agrid use a "common" file space by default, everyone can access to this space, even if files can be encrypted. It's possible to create a user. A user create a dedicated file space no one can access except the user. A user can see and act only on its own file space.
+To authenticate a user a token a given at user creation by the cluster, this token should be provided for all commands used with a user.
 
 
 # CLI
 
 Agrid command lines implemented using the Agrid Go API
 
+### create a user
+`agrid user create [username] <--token>`
+
+Create a user with its own file space in the cluster. This command return a token used to authenticate the user when executing any other command
+- [username] the user name to create
+- <--token> set the token for this user, without the token is computed by the server
+
+### remove a user
+`agrid user remove [username] <--token>`
+
+Remove a user. All files in its file space should have been removed first
+
+- [username] the user name to remove
+- <--token token> the token to authenticate the user
 
 ### store a file on cluster:
 
-`agrid file store [source] [target] <--thread> <--key>`
+`agrid file store [source] [target] <--thread> <--key> <--user> <--token>`
 - [source]: the full pathname of the local file to store
 - [target]: the full pathname of the file in the cluster
-- <--thread>: optionally: number of threads used to store the file (default 1), each thread open a grpc connection on a distinct node.
+- <--thread number>: optionally: number of threads used to store the file (default 1), each thread open a grpc connection on a distinct node.
 - <--key>: optionally: AES key to encrypt the file
+- <--user userName:token>: to store on the usee file space, token is given at token creation
 
 
 ### retrieve a file from cluster
@@ -105,19 +120,21 @@ Retrieve a file from cluster using duplicated blocks if some are missing
 - [target]: the full pathname of the file to write locally
 - <--thread>: optionally: number of threads used to retrieve the file (default 1), each thread open a grpc connection on a distinct node.
 - <--key>: optionally: AES key to encrypt the file
-
+- <--user userName:token>: to store on the usee file space, token is given at user creation
 
 ### list the files on the cluster
 
 `agrid file ls [path]`
 - [path]: path name on the cluster to list, default /
+- <--user userName:token>: to store on the usee file space, token is given at user creation
 
 
 ### remove a file on the cluster
 
 `agrid file rm [pathname] <-r>`
-[pathname]: full pathname of the file to remove on the cluster
-<-r>: to remove a folder recursively
+- [pathname]: full pathname of the file to remove on the cluster
+- <-r>: to remove a folder recursively
+- <--user userName:token>: to store on the usee file space, token is given at user creation
 
 ### list the cluster nodes
 
@@ -142,6 +159,25 @@ Agrid is usable using Go api API github.com/freignat91/agrid/agridapi
         err, fileList := api.FileLs("/")
         ...
 ```
+
+### func (api *AgridAPI) userCreate(name string) (string, error)
+
+Create a new user, return a token to authenticate the user
+Argument
+- name: the user name to create
+
+### func (api *AgridAPI) userRemove(name string) error
+
+Remove a user
+Argument
+- name: the user name to remove
+
+### func (api *AgridAPI) SetUser(user string, token string)
+
+Set the current user and authenticate it with the token, then every api function will be executed with this user
+Arguements:
+- user: user name to set
+- token: the token to authenticate the user
 
 ### func (api *AgridAPI) FileLs(folder string) ([]string, error)
 
@@ -205,4 +241,3 @@ List the node of the cluster
 
 Agrid is licensed under the Apache License, Version 2.0. See https://github.com/freignat91/agrid/blob/master/LICENSE
 for the full license text.
-

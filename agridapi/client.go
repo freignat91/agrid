@@ -122,6 +122,8 @@ func (g *gnodeClient) sendMessage(mes *gnode.AntMes, wait bool) (*gnode.AntMes, 
 	g.lock.Lock()
 	defer g.lock.Unlock()
 	mes.FromClient = g.id
+	mes.UserName = g.api.userName
+	mes.UserToken = g.api.userToken
 	//fmt.Printf("Order: %d size: %d\n", mes.Order, len(mes.Data))
 	err := g.stream.Send(mes)
 	if err != nil {
@@ -130,6 +132,9 @@ func (g *gnodeClient) sendMessage(mes *gnode.AntMes, wait bool) (*gnode.AntMes, 
 	//g.printf(Info, "Message sent: %v\n", mes)
 	if wait {
 		ret := <-g.recvChan
+		if ret.ErrorMes != "" {
+			return nil, fmt.Errorf("%s", ret.ErrorMes)
+		}
 		return ret, nil
 	}
 	return nil, nil

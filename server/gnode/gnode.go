@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"io/ioutil"
+	"math/rand"
 	"net"
 	"os"
+	"path"
 	"sync"
 	"time"
 )
@@ -43,6 +46,8 @@ type GNode struct {
 	fileManager     *FileManager
 	lockId          sync.RWMutex
 	dataPath        string
+	nodeFunctions   *nodeFunctions
+	userMap         map[string]string
 }
 
 type gnodeTarget struct {
@@ -91,8 +96,10 @@ func (g *GNode) init() {
 	g.clientMap = make(map[string]*gnodeClient)
 	g.targetMap = make(map[string]*gnodeTarget)
 	g.nbNode = config.nbNode
-	g.dataPath = "/data"
+	g.dataPath = config.rootDataPath
+	g.loadUser()
 	g.idMap.Init()
+	g.nodeFunctions = &nodeFunctions{gnode: g}
 	g.fileManager = &FileManager{}
 	g.fileManager.init(g)
 	g.startRESTAPI()
@@ -100,7 +107,6 @@ func (g *GNode) init() {
 	g.receiverManager.start(g, config.bufferSize, config.parallelReceiver)
 	g.senderManager.start(g, config.bufferSize, config.parallelSender)
 	g.host = os.Getenv("HOSTNAME")
-	initFunctionMap()
 	time.Sleep(3 * time.Second)
 }
 
@@ -220,6 +226,23 @@ func (g *GNode) getNewId(setAsAlreadySent bool) string {
 	return id
 }
 
+func (g *GNode) createAnswer(mes *AntMes) *AntMes {
+	return &AntMes{
+		Function:     fmt.Sprintf("answer-%s", mes.Function),
+		Target:       mes.Origin,
+		OriginId:     mes.Id,
+		FromClient:   mes.FromClient,
+		IsAnswer:     true,
+		Path:         mes.Path,
+		PathIndex:    int32(len(mes.Path) - 1),
+		ReturnAnswer: false,
+		Debug:        mes.Debug,
+		IsPathWriter: mes.IsPathWriter,
+		AnswerWait:   mes.AnswerWait,
+		Eof:          true,
+	}
+}
+
 func (g *GNode) sendBackClient(clientId string, mes *AntMes) {
 	client, ok := g.clientMap[clientId]
 	if !ok {
@@ -238,7 +261,7 @@ func (g *GNode) sendBackClient(clientId string, mes *AntMes) {
 			Function: "forceGC",
 			Args:     []string{"false"},
 		})
-		forceGC(g, false)
+		g.nodeFunctions.forceGC()
 	}
 
 }
@@ -250,4 +273,93 @@ func (g *GNode) startReorganizer() {
 			g.fileManager.moveRandomBlock()
 		}
 	}()
+}
+
+func (g *GNode) getToken() string {
+	rand.Seed(time.Now().UnixNano())
+	b := make([]byte, 32)
+	rand.Read(b)
+	return fmt.Sprintf("%x", b)
+}
+
+func (g *GNode) createUser(userName string, token string) error {
+	logf.info("Create user %s\n", userName)
+	_, err := ioutil.ReadDir(path.Join(config.rootDataPath, userName))
+	if err == nil {
+		return fmt.Errorf("User %s already exist", userName)
+	}
+	os.MkdirAll(path.Join(config.rootDataPath, userName), os.ModeDir)
+	file, errc := os.Create(path.Join(config.rootDataPath, userName, "token"))
+	if errc != nil {
+		return errc
+	}
+	if _, err := file.WriteString(token); err != nil {
+		return err
+	}
+	file.Close()
+	g.userMap[userName] = token
+	return nil
+}
+
+func (g *GNode) removeUser(userName string, token string, force bool) error {
+	if !g.checkUser(userName, token) {
+		return fmt.Errorf("Invalid user/token")
+	}
+	logf.warn("Remove user %s force mode=%t\n", userName, force)
+	dir := path.Join(config.rootDataPath)
+	fileList, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	exist := false
+	for _, fd := range fileList {
+		if fd.Name() != "token" && fd.Name() != "meta" {
+			exist = true
+			break
+		}
+	}
+	if exist && !force {
+		return fmt.Errorf("Impossible to remove user %s files still exist (use --force", userName)
+	}
+	if err := os.RemoveAll(path.Join(config.rootDataPath, userName)); err != nil {
+		return err
+	}
+	delete(g.userMap, userName)
+	return nil
+}
+
+func (g *GNode) loadUser() error {
+	g.userMap = make(map[string]string)
+	dir := path.Join(config.rootDataPath)
+	fileList, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	data := make([]byte, 64, 64)
+	for _, fd := range fileList {
+		f, err := os.Open(path.Join(dir, fd.Name(), "token"))
+		if err == nil {
+			n, errR := f.Read(data)
+			if errR == nil {
+				token := string(data[0 : n-1])
+				logf.info("Add user %s\n", fd.Name())
+				g.userMap[fd.Name()] = token
+			}
+		}
+	}
+	return nil
+}
+
+func (g *GNode) checkUser(user string, token string) bool {
+	if user == "" || user == "common" {
+		return true
+	}
+	check, ok := g.userMap[user]
+	if !ok {
+		return false
+	}
+	if token == check {
+		return true
+	}
+	return false
 }

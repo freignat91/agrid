@@ -26,6 +26,7 @@ func init() {
 	FileStoreCmd.Flags().Int("thread", 1, "send thread number")
 	FileStoreCmd.Flags().String("meta", "", "metadata folowing the file format: name:value, name:value, ...")
 	FileStoreCmd.Flags().String("key", "", "AES key to encrypt file, 32 bybes")
+	FileStoreCmd.Flags().String("user", "", `set user name`)
 }
 
 func (m *agridCLI) fileStore(cmd *cobra.Command, args []string) error {
@@ -52,6 +53,7 @@ func (m *agridCLI) fileStore(cmd *cobra.Command, args []string) error {
 	t0 := time.Now()
 	api := agridapi.New(m.server)
 	m.setAPILogLevel(api)
+	api.SetUser(cmd.Flag("user").Value.String())
 	if api.FileStore(fileName, targetedPath, &meta, nbThread, key); err != nil {
 		return err
 	}

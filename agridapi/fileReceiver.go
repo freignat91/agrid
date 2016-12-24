@@ -67,6 +67,8 @@ func (m *fileReceiver) retrieveFileThread(clusterFile string, thread int, nbThre
 			NbThread:  int32(nbThread),
 			Thread:    int32(thread),
 			Duplicate: int32(currentDuplicate),
+			UserName:  m.api.userName,
+			UserToken: m.api.userToken,
 		}
 		if _, err := client.client.RetrieveFile(context.Background(), req); err != nil {
 			m.chanReceive <- err.Error()

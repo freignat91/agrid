@@ -15,7 +15,7 @@ func (api *AgridAPI) NodeClear(node string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := client.createSendMessage(node, true, "clear"); err != nil {
+	if _, err := client.createSendMessage(node, false, "clear"); err != nil {
 		return err
 	}
 	return nil
@@ -48,9 +48,13 @@ func (api *AgridAPI) NodePing(node string, debugTrace bool) (string, error) {
 	}
 	ret := ""
 	for _, node := range mret.Path {
-		ret += fmt.Sprintf("%s -> %s", ret, node)
+		if ret == "" {
+			ret = node
+		} else {
+			ret += fmt.Sprintf("%s -> %s", ret, node)
+		}
 	}
-	return fmt.Sprintf("% -> %s", client.nodeName), nil
+	return fmt.Sprintf("%s -> %s", ret, node), nil
 }
 
 // NodePingFrom ping a node from another node
@@ -61,7 +65,7 @@ func (api *AgridAPI) NodePingFromTo(node1 string, node2 string, debugTrace bool)
 	}
 
 	mes := client.createMessage(node1, true, "pingFromTo", node2)
-	mes.Debug = true //debugTrace
+	mes.Debug = api.isDebug()
 	fmt.Printf("mes: %v\n", mes)
 	ret, errs := client.sendMessage(mes, true)
 	if errs != nil {
@@ -88,7 +92,7 @@ func (api *AgridAPI) NodeLs() ([]string, error) {
 	if err != nil {
 		return rep, err
 	}
-	_, errp := client.createSendMessage("*", false, "getConnections", "client")
+	_, errp := client.createSendMessage("*", false, "getConnections")
 	if errp != nil {
 		return rep, errp
 	}
