@@ -46,6 +46,7 @@ type GNode struct {
 	fileManager     *FileManager
 	lockId          sync.RWMutex
 	dataPath        string
+	nodeFunctions   *nodeFunctions
 	userMap         map[string]string
 }
 
@@ -98,6 +99,7 @@ func (g *GNode) init() {
 	g.dataPath = config.rootDataPath
 	g.loadUser()
 	g.idMap.Init()
+	g.nodeFunctions = &nodeFunctions{gnode: g}
 	g.fileManager = &FileManager{}
 	g.fileManager.init(g)
 	g.startRESTAPI()
@@ -223,6 +225,23 @@ func (g *GNode) getNewId(setAsAlreadySent bool) string {
 		g.idMap.Add(id)
 	}
 	return id
+}
+
+func (g *GNode) createAnswer(mes *AntMes) *AntMes {
+	return &AntMes{
+		Function:     fmt.Sprintf("answer-%s", mes.Function),
+		Target:       mes.Origin,
+		OriginId:     mes.Id,
+		FromClient:   mes.FromClient,
+		IsAnswer:     true,
+		Path:         mes.Path,
+		PathIndex:    int32(len(mes.Path) - 1),
+		ReturnAnswer: false,
+		Debug:        mes.Debug,
+		IsPathWriter: mes.IsPathWriter,
+		AnswerWait:   mes.AnswerWait,
+		Eof:          true,
+	}
 }
 
 func (g *GNode) sendBackClient(clientId string, mes *AntMes) {

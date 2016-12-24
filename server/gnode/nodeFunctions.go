@@ -8,12 +8,14 @@ import (
 	"time"
 )
 
+type nodeFunctions struct {
+	gnode *GNode
+}
+
 var functionMap map[string]interface{}
 
 func initFunctionMap() {
 	functionMap = make(map[string]interface{})
-	functionMap["ping"] = ping
-	functionMap["pingFromTo"] = pingFromTo
 	functionMap["serviceInfo"] = serviceInfo
 	functionMap["setLogLevel"] = setLogLevel
 	functionMap["getConnections"] = getConnections
@@ -29,24 +31,45 @@ func initFunctionMap() {
 
 }
 
-func ping(g *GNode, name string) string {
-	logf.debug("execute ping from: %s\n", name)
-	return fmt.Sprintf("pong from %s (%s)", g.name, g.host)
+func (n *nodeFunctions) ping(mes *AntMes) error {
+	logf.debug("execute ping from: %s\n", mes.Origin)
+	answer := n.gnode.createAnswer(mes)
+	answer.Args = []string{fmt.Sprintf("pong from %s (%s)", n.gnode.name, n.gnode.host)}
+	n.gnode.senderManager.sendMessage(answer)
+	return nil
 }
 
-func pingFromTo(g *GNode, target string) string {
-	logf.debug("execute pingFromTo from: %s tp %s\n", g.name, target)
-	mes := NewAntMes(target, true, "ping", "pingFromTo")
-	mret, err := g.senderManager.sendMessageReturnAnswer(mes, 3)
-	if err != nil {
-		return err.Error()
+func (n *nodeFunctions) pingFromTo(mes *AntMes) error {
+	fmt.Printf("pingFromTo: %v\n", mes)
+	if len(mes.Args) < 1 {
+		return fmt.Errorf("Number of argument error, need the pingFromTo target")
 	}
+	fmt.Printf("args ok\n")
+	target := mes.Args[0]
+	logf.debug("execute pingFromTo from: %s tp %s\n", n.gnode.name, target)
+	mesp := NewAntMes(target, true, "ping")
+	mret, err := n.gnode.senderManager.sendMessageReturnAnswer(mesp, 3)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("ping: %v\n", mret)
 	ret := ""
 	for _, node := range mret.Path {
-		ret += fmt.Sprintf("%s -> %s", ret, node)
+		if ret == "" {
+			ret = node
+		} else {
+			ret += fmt.Sprintf("%s -> %s", ret, node)
+		}
 	}
-	return ret + " -> " + target
+	ret += " -> " + target
+	answer := n.gnode.createAnswer(mes)
+	answer.Args = []string{ret}
+	fmt.Printf("answer: %v\n", answer)
+	n.gnode.senderManager.sendMessage(answer)
+	return nil
 }
+
+// refactoring on going...
 
 func getNodeName(g *GNode, dec int) string {
 	index := g.nodeIndex + dec

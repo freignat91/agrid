@@ -132,6 +132,9 @@ func (g *gnodeClient) sendMessage(mes *gnode.AntMes, wait bool) (*gnode.AntMes, 
 	//g.printf(Info, "Message sent: %v\n", mes)
 	if wait {
 		ret := <-g.recvChan
+		if ret.ErrorMes != "" {
+			return nil, fmt.Errorf("%s", ret.ErrorMes)
+		}
 		return ret, nil
 	}
 	return nil, nil

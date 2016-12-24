@@ -16,26 +16,23 @@ type ReceiverManager struct {
 	receiver     MessageReceiver
 	answerMap    map[string]*AntMes
 	getChan      chan string
-	functionMap  map[string]*agridInternalFunction
-}
-
-type agridInternalFunction struct {
-	function    interface{}
-	returnError bool
+	functionMap  map[string]interface{}
 }
 
 func (m *ReceiverManager) loadFunctions() {
-	m.functionMap = make(map[string]*agridInternalFunction)
-	m.functionMap["storeBlock"] = &agridInternalFunction{function: m.gnode.fileManager.storeBlock, returnError: true}
-	m.functionMap["storeBlocAck"] = &agridInternalFunction{function: m.gnode.fileManager.storeBlockAck, returnError: true}
-	m.functionMap["getFileBlocks"] = &agridInternalFunction{function: m.gnode.fileManager.sendBlocks, returnError: true}
-	m.functionMap["sendBackBlock"] = &agridInternalFunction{function: m.gnode.fileManager.receivedBackBlock, returnError: true}
-	m.functionMap["listFiles"] = &agridInternalFunction{function: m.gnode.fileManager.listFiles, returnError: true}
-	m.functionMap["listNodeFiles"] = &agridInternalFunction{function: m.gnode.fileManager.listNodeFiles, returnError: true}
-	m.functionMap["sendBackListFilesToClient"] = &agridInternalFunction{function: m.gnode.fileManager.sendBackListFilesToClient, returnError: true}
-	m.functionMap["removeFiles"] = &agridInternalFunction{function: m.gnode.fileManager.removeFiles, returnError: true}
-	m.functionMap["removeNodeFiles"] = &agridInternalFunction{function: m.gnode.fileManager.removeNodeFiles, returnError: true}
-	m.functionMap["sendBackRemoveFilesToClient"] = &agridInternalFunction{function: m.gnode.fileManager.sendBackRemoveFilesToClient, returnError: true}
+	m.functionMap = make(map[string]interface{})
+	m.functionMap["storeBlock"] = m.gnode.fileManager.storeBlock
+	m.functionMap["storeBlocAck"] = m.gnode.fileManager.storeBlockAck
+	m.functionMap["getFileBlocks"] = m.gnode.fileManager.sendBlocks
+	m.functionMap["sendBackBlock"] = m.gnode.fileManager.receivedBackBlock
+	m.functionMap["listFiles"] = m.gnode.fileManager.listFiles
+	m.functionMap["listNodeFiles"] = m.gnode.fileManager.listNodeFiles
+	m.functionMap["sendBackListFilesToClient"] = m.gnode.fileManager.sendBackListFilesToClient
+	m.functionMap["removeFiles"] = m.gnode.fileManager.removeFiles
+	m.functionMap["removeNodeFiles"] = m.gnode.fileManager.removeNodeFiles
+	m.functionMap["sendBackRemoveFilesToClient"] = m.gnode.fileManager.sendBackRemoveFilesToClient
+	m.functionMap["ping"] = m.gnode.nodeFunctions.ping
+	m.functionMap["pingFromTo"] = m.gnode.nodeFunctions.pingFromTo
 }
 
 func (m *ReceiverManager) start(gnode *GNode, bufferSize int, maxGoRoutine int) {

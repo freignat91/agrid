@@ -90,6 +90,13 @@ func (api *AgridAPI) debug(format string, args ...interface{}) {
 	}
 }
 
+func (api *AgridAPI) isDebug() bool {
+	if api.logLevel >= LOG_DEBUG {
+		return true
+	}
+	return false
+}
+
 func (api *AgridAPI) printf(format string, args ...interface{}) {
 	log.Printf(format, args...)
 }

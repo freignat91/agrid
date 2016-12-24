@@ -23,66 +23,21 @@ func (r *MessageReceiver) start() {
 			mes := <-r.receiverManager.ioChan
 			//log.Printf("Executor %d chan: %v\n", e.id, mes)
 			if mes != nil {
-				r.executeMessage(mes)
-				mes = nil
+				r.usage++
+				reached, stop := r.targetReached(mes)
+				if reached {
+					if mes.IsAnswer {
+						r.receiveAnswer(mes)
+						return
+					}
+					r.executeMessage(mes)
+				}
+				if !stop {
+					r.gnode.senderManager.sendMessage(mes)
+				}
 			}
 		}
 	}()
-}
-
-func (r *MessageReceiver) executeMessage(mes *AntMes) {
-	//logf.printf("execute message: %s\n", mes.toString())
-	r.usage++
-	reached, stop := r.targetReached(mes)
-	if reached {
-		if mes.IsAnswer {
-			r.receiveAnswer(mes)
-			return
-		}
-		//Internal functions format: function(mes *AntMes) error
-		//logf.info("Reveiver %d: Received mes: %v\n", r.id, mes)
-		if function, ok := r.receiverManager.functionMap[mes.Function]; ok {
-			f := reflect.ValueOf(function.function)
-			logf.info("Execute function: %s\n", mes.Function)
-			ret := f.Call([]reflect.Value{reflect.ValueOf(mes)})
-			//logf.info("function: %s return: %v\n", mes.Function, ret)
-			if function.returnError && ret[0].Interface() != nil {
-				err := ret[0].Interface().(error)
-				r.gnode.senderManager.sendMessage(&AntMes{
-					Function:     fmt.Sprintf("answer-%s", mes.Function),
-					Target:       mes.Origin,
-					OriginId:     mes.Id,
-					FromClient:   mes.FromClient,
-					IsAnswer:     true,
-					Eof:          true,
-					Path:         mes.Path,
-					PathIndex:    int32(len(mes.Path) - 1),
-					ReturnAnswer: false,
-					Debug:        mes.Debug,
-					IsPathWriter: mes.IsPathWriter,
-					AnswerWait:   mes.AnswerWait,
-					ErrorMes:     err.Error(),
-				})
-			}
-			return
-		}
-		logf.debugMes(mes, "Receiver %d: Received mes: %+v\n", r.id, mes)
-		if err := r.executeFunction(mes); err != nil {
-			serr := fmt.Sprintf("Error executing function %s with message: %v error: %v\n", mes.Function, mes, err)
-			logf.error(serr)
-			if mes.FromClient != "" {
-				ret := make([]reflect.Value, 1, 1)
-				ret[0] = reflect.ValueOf(serr)
-				r.sendAnswer(mes, ret)
-			}
-		}
-		if stop {
-			return
-		}
-	}
-	if !stop {
-		r.gnode.senderManager.sendMessage(mes)
-	}
 }
 
 func (r *MessageReceiver) targetReached(mes *AntMes) (bool, bool) {
@@ -96,6 +51,33 @@ func (r *MessageReceiver) targetReached(mes *AntMes) (bool, bool) {
 		return true, true
 	}
 	return false, false
+}
+
+func (r *MessageReceiver) executeMessage(mes *AntMes) {
+	//Internal functions format: function(mes *AntMes) error
+	if function, ok := r.receiverManager.functionMap[mes.Function]; ok {
+		f := reflect.ValueOf(function)
+		logf.info("Execute function: %s\n", mes.Function)
+		ret := f.Call([]reflect.Value{reflect.ValueOf(mes)})
+		//logf.info("function: %s return: %v\n", mes.Function, ret)
+		if ret[0].Interface() != nil {
+			err := ret[0].Interface().(error)
+			answer := r.gnode.createAnswer(mes)
+			answer.ErrorMes = err.Error()
+			r.gnode.senderManager.sendMessage(answer)
+		}
+		return
+	}
+	logf.debugMes(mes, "Receiver %d: Received mes: %+v\n", r.id, mes)
+	if err := r.executeFunction(mes); err != nil {
+		serr := fmt.Sprintf("Error executing function %s with message: %v error: %v\n", mes.Function, mes, err)
+		logf.error(serr)
+		if mes.FromClient != "" {
+			ret := make([]reflect.Value, 1, 1)
+			ret[0] = reflect.ValueOf(serr)
+			r.sendAnswer(mes, ret)
+		}
+	}
 }
 
 func (r *MessageReceiver) executeFunction(mes *AntMes) error {
