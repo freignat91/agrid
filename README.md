@@ -94,16 +94,17 @@ Create a user with its own file space in the cluster. This command return a toke
 - <--token> set the token for this user, without the token is computed by the server
 
 ### remove a user
-`agrid user remove [username] <--token>`
+`agrid user remove [username] [token] <--force>`
 
 Remove a user. All files in its file space should have been removed first
 
 - [username] the user name to remove
-- <--token token> the token to authenticate the user
+- [token] the user's token to authenticate the user
+- <--force> if this option exist then the user is removed with all its associated files, if not the user is removed only if its file space is empty.
 
 ### store a file on cluster:
 
-`agrid file store [source] [target] <--thread> <--key> <--user> <--token>`
+`agrid file store [source] [target] <--thread> <--key> <--user>`
 - [source]: the full pathname of the local file to store
 - [target]: the full pathname of the file in the cluster
 - <--thread number>: optionally: number of threads used to store the file (default 1), each thread open a grpc connection on a distinct node.
@@ -115,7 +116,7 @@ Remove a user. All files in its file space should have been removed first
 
 Retrieve a file from cluster using duplicated blocks if some are missing
 
-`agrid file retrieve [source] [target] <--key>`
+`agrid file retrieve [source] [target] <--thread> <--key> <--user>`
 - [source]: the full pathname of the file to get in cluster
 - [target]: the full pathname of the file to write locally
 - <--thread>: optionally: number of threads used to retrieve the file (default 1), each thread open a grpc connection on a distinct node.
@@ -124,14 +125,14 @@ Retrieve a file from cluster using duplicated blocks if some are missing
 
 ### list the files on the cluster
 
-`agrid file ls [path]`
+`agrid file ls [path] <--user>`
 - [path]: path name on the cluster to list, default /
 - <--user userName:token>: to store on the usee file space, token is given at user creation
 
 
 ### remove a file on the cluster
 
-`agrid file rm [pathname] <-r>`
+`agrid file rm [pathname] <-r> <--user>`
 - [pathname]: full pathname of the file to remove on the cluster
 - <-r>: to remove a folder recursively
 - <--user userName:token>: to store on the usee file space, token is given at user creation
@@ -160,24 +161,26 @@ Agrid is usable using Go api API github.com/freignat91/agrid/agridapi
         ...
 ```
 
-### func (api *AgridAPI) userCreate(name string) (string, error)
+### func (api *AgridAPI) userCreate(name string, token string) (string, error)
 
 Create a new user, return a token to authenticate the user
 Argument
 - name: the user name to create
+- token: if equal to "", the token is computed by server, if not it'sused as the user token.
 
-### func (api *AgridAPI) userRemove(name string) error
+### func (api *AgridAPI) userRemove(name string, token string force bool) error
 
 Remove a user
 Argument
 - name: the user name to remove
+- token: the user's token to authenticate the user
+- force : if true the user is removed with all its associated files, if false the user is removed only if its file space is empty.
 
-### func (api *AgridAPI) SetUser(user string, token string)
+### func (api *AgridAPI) SetUser(user string)
 
 Set the current user and authenticate it with the token, then every api function will be executed with this user
 Arguements:
-- user: user name to set
-- token: the token to authenticate the user
+- user: format userName:token, or "" to set the common user
 
 ### func (api *AgridAPI) FileLs(folder string) ([]string, error)
 
