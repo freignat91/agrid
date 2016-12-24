@@ -16,10 +16,31 @@ type ReceiverManager struct {
 	receiver     MessageReceiver
 	answerMap    map[string]*AntMes
 	getChan      chan string
+	functionMap  map[string]*agridInternalFunction
+}
+
+type agridInternalFunction struct {
+	function    interface{}
+	returnError bool
+}
+
+func (m *ReceiverManager) loadFunctions() {
+	m.functionMap = make(map[string]*agridInternalFunction)
+	m.functionMap["storeBlock"] = &agridInternalFunction{function: m.gnode.fileManager.storeBlock, returnError: true}
+	m.functionMap["storeBlocAck"] = &agridInternalFunction{function: m.gnode.fileManager.storeBlockAck, returnError: true}
+	m.functionMap["getFileBlocks"] = &agridInternalFunction{function: m.gnode.fileManager.sendBlocks, returnError: true}
+	m.functionMap["sendBackBlock"] = &agridInternalFunction{function: m.gnode.fileManager.receivedBackBlock, returnError: true}
+	m.functionMap["listFiles"] = &agridInternalFunction{function: m.gnode.fileManager.listFiles, returnError: true}
+	m.functionMap["listNodeFiles"] = &agridInternalFunction{function: m.gnode.fileManager.listNodeFiles, returnError: true}
+	m.functionMap["sendBackListFilesToClient"] = &agridInternalFunction{function: m.gnode.fileManager.sendBackListFilesToClient, returnError: true}
+	m.functionMap["removeFiles"] = &agridInternalFunction{function: m.gnode.fileManager.removeFiles, returnError: true}
+	m.functionMap["removeNodeFiles"] = &agridInternalFunction{function: m.gnode.fileManager.removeNodeFiles, returnError: true}
+	m.functionMap["sendBackRemoveFilesToClient"] = &agridInternalFunction{function: m.gnode.fileManager.sendBackRemoveFilesToClient, returnError: true}
 }
 
 func (m *ReceiverManager) start(gnode *GNode, bufferSize int, maxGoRoutine int) {
 	m.gnode = gnode
+	m.loadFunctions()
 	m.nbReceiver = maxGoRoutine
 	m.buffer.init(bufferSize)
 	m.ioChan = make(chan *AntMes)

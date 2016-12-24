@@ -22,6 +22,9 @@ func (api *AgridAPI) FileLs(folder string) ([]string, error) {
 	for {
 		mes, ok := client.getNextAnswer(1000)
 		if ok {
+			if mes.ErrorMes != "" {
+				return lineList, fmt.Errorf("%s", mes.ErrorMes)
+			}
 			for _, line := range mes.Args {
 				listMap[line] = 1
 			}
@@ -81,6 +84,9 @@ func (api *AgridAPI) FileRm(clusterPathname string, recursive bool) error {
 	for {
 		mes, ok := client.getNextAnswer(1000)
 		if ok {
+			if mes.ErrorMes != "" {
+				return fmt.Errorf("%s", mes.ErrorMes)
+			}
 			api.info("Receive answer: %v\n", mes.Origin)
 			if len(mes.Args) > 0 {
 				return fmt.Errorf("%s", mes.Args[0])

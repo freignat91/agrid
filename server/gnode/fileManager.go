@@ -239,12 +239,21 @@ func (f *FileManager) removeNodeFiles(mes *AntMes) error {
 			return fmt.Errorf("Trying to remove a directory %s without recusive flag set", filename)
 		}
 		logf.info("remove all dir\n")
-		return os.RemoveAll(fullName)
+		if err := os.RemoveAll(fullName); err != nil {
+			return err
+		}
+	} else {
+		logf.info("remove all file\n")
+		if err := f.removeAgridFiles(fullName); err != nil {
+			return err
+		}
 	}
-	logf.info("remove all file\n")
-	if err := f.removeAgridFiles(fullName); err != nil {
-		return err
-	}
+	f.gnode.senderManager.sendMessage(&AntMes{
+		Target:     mes.Origin,
+		Function:   "sendBackRemoveFilesToClient",
+		FromClient: mes.FromClient,
+		Eof:        true,
+	})
 	return nil
 }
 

@@ -39,72 +39,34 @@ func (r *MessageReceiver) executeMessage(mes *AntMes) {
 			r.receiveAnswer(mes)
 			return
 		}
-		//Special file function
-		if mes.Function == "storeBlock" {
-			if err := r.gnode.fileManager.storeBlock(mes); err != nil {
-				logf.error("Store block error: %v\n", err)
-			}
-			return
-		} else if mes.Function == "storeBlocAck" {
-			if err := r.gnode.fileManager.storeBlockAck(mes); err != nil {
-				logf.error("Store block ack error: %v\n", err)
-			}
-			return
-		} else if mes.Function == "getFileBlocks" {
-			if err := r.gnode.fileManager.sendBlocks(mes); err != nil {
-				logf.error("Send block error: %v\n", err)
-			}
-			return
-		} else if mes.Function == "sendBackBlock" {
-			if err := r.gnode.fileManager.receivedBackBlock(mes); err != nil {
-				logf.error("ReveiveBackBlock error: %v\n", err)
-			}
-			return
-		} else if mes.Function == "listFiles" {
-			if err := r.gnode.fileManager.listFiles(mes); err != nil {
-				logf.error("listFiles error: %v\n", err)
-			}
-			return
-		} else if mes.Function == "listNodeFiles" {
-			if err := r.gnode.fileManager.listNodeFiles(mes); err != nil {
-				logf.error("listNodeFiles error: %v\n", err)
-			}
-			return
-		} else if mes.Function == "sendBackListFilesToClient" {
-			if err := r.gnode.fileManager.sendBackListFilesToClient(mes); err != nil {
-				logf.error("sendBackListFilesToClient error: %v\n", err)
-			}
-			return
-		} else if mes.Function == "removeFiles" {
-			if err := r.gnode.fileManager.removeFiles(mes); err != nil {
-				logf.error("removeFiles error: %v\n", err)
-			}
-			return
-		} else if mes.Function == "removeNodeFiles" {
-			if err := r.gnode.fileManager.removeNodeFiles(mes); err != nil {
-				logf.error("removeNodeFiles error: %v\n", err)
+		//Internal functions format: function(mes *AntMes) error
+		//logf.info("Reveiver %d: Received mes: %v\n", r.id, mes)
+		if function, ok := r.receiverManager.functionMap[mes.Function]; ok {
+			f := reflect.ValueOf(function.function)
+			logf.info("Execute function: %s\n", mes.Function)
+			ret := f.Call([]reflect.Value{reflect.ValueOf(mes)})
+			//logf.info("function: %s return: %v\n", mes.Function, ret)
+			if function.returnError && ret[0].Interface() != nil {
+				err := ret[0].Interface().(error)
 				r.gnode.senderManager.sendMessage(&AntMes{
-					Target:     mes.Origin,
-					Function:   "sendBackRemoveFilesToClient",
-					FromClient: mes.FromClient,
-					Args:       []string{err.Error()},
-					Eof:        true,
+					Function:     fmt.Sprintf("answer-%s", mes.Function),
+					Target:       mes.Origin,
+					OriginId:     mes.Id,
+					FromClient:   mes.FromClient,
+					IsAnswer:     true,
+					Eof:          true,
+					Path:         mes.Path,
+					PathIndex:    int32(len(mes.Path) - 1),
+					ReturnAnswer: false,
+					Debug:        mes.Debug,
+					IsPathWriter: mes.IsPathWriter,
+					AnswerWait:   mes.AnswerWait,
+					ErrorMes:     err.Error(),
 				})
-			}
-			r.gnode.senderManager.sendMessage(&AntMes{
-				Target:     mes.Origin,
-				Function:   "sendBackRemoveFilesToClient",
-				FromClient: mes.FromClient,
-				Eof:        true,
-			})
-			return
-		} else if mes.Function == "sendBackRemoveFilesToClient" {
-			if err := r.gnode.fileManager.sendBackRemoveFilesToClient(mes); err != nil {
-				logf.error("sendBackRemoveFilesToClient error: %v\n", err)
 			}
 			return
 		}
-		logf.debugMes(mes, "Executor %d:Received mes: %+v\n", r.id, mes)
+		logf.debugMes(mes, "Receiver %d: Received mes: %+v\n", r.id, mes)
 		if err := r.executeFunction(mes); err != nil {
 			serr := fmt.Sprintf("Error executing function %s with message: %v error: %v\n", mes.Function, mes, err)
 			logf.error(serr)

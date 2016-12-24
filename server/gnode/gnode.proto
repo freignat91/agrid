@@ -33,13 +33,14 @@ message AntMes {
         bool no_blocking = 19;
         bool debug = 20;
         bool answer_wait = 21;
-        int32 nb_thread = 22;
-        int32 thread = 23;
-        int32 duplicate = 24;
-        bool eof = 25;
-        string user_name = 26;
-        string user_token = 27;
-        bytes data = 28;
+        string errorMes = 22;
+        int32 nb_thread = 23;
+        int32 thread = 24;
+        int32 duplicate = 25;
+        bool eof = 26;
+        string user_name = 27;
+        string user_token = 28;
+        bytes data = 29;
 }
 
 message AntRet{
