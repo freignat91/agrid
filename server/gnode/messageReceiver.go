@@ -1,10 +1,7 @@
 package gnode
 
 import (
-	"fmt"
 	"reflect"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -66,74 +63,7 @@ func (r *MessageReceiver) executeMessage(mes *AntMes) {
 			answer.ErrorMes = err.Error()
 			r.gnode.senderManager.sendMessage(answer)
 		}
-		return
 	}
-	logf.debugMes(mes, "Receiver %d: Received mes: %+v\n", r.id, mes)
-	if err := r.executeFunction(mes); err != nil {
-		serr := fmt.Sprintf("Error executing function %s with message: %v error: %v\n", mes.Function, mes, err)
-		logf.error(serr)
-		if mes.FromClient != "" {
-			ret := make([]reflect.Value, 1, 1)
-			ret[0] = reflect.ValueOf(serr)
-			r.sendAnswer(mes, ret)
-		}
-	}
-}
-
-func (r *MessageReceiver) executeFunction(mes *AntMes) error {
-	//logf.info("Executing function %s with args %v\n", mes.Function, mes.Args)
-	fc, ok := functionMap[mes.Function]
-	if !ok {
-		return fmt.Errorf("The function %s does not exist\n", mes.Function)
-	}
-
-	f := reflect.ValueOf(fc)
-	if len(mes.Args) != f.Type().NumIn()-1 {
-		return fmt.Errorf("The number of params for function %s is not adapted function=%d received=%d\n", mes.Function, f.Type().NumIn()-1, len(mes.Args))
-	}
-	in, err := r.convertFunctionArgs(f, mes.Function, mes.Args)
-	if err != nil {
-		return fmt.Errorf("The function execution error: %v\n", err)
-	}
-	ret := f.Call(in)
-	logf.debugMes(mes, "Function %s executed, return %v\n", mes.Function, ret)
-	if mes.ReturnAnswer {
-		r.sendAnswer(mes, ret)
-	}
-	return nil
-}
-
-func (r *MessageReceiver) sendAnswer(mes *AntMes, ret []reflect.Value) error {
-	args := []string{}
-	for _, val := range ret {
-		arg, err := r.marshal(val)
-		if err != nil {
-			return err
-		}
-		args = append(args, arg)
-	}
-	retMes := &AntMes{
-		Id:           fmt.Sprintf("answer-%s-%s", r.gnode.name, mes.Id),
-		Origin:       r.gnode.name,
-		Target:       mes.Origin,
-		FromClient:   mes.FromClient,
-		Path:         mes.Path,
-		PathIndex:    int32(len(mes.Path) - 1),
-		IsAnswer:     true,
-		ReturnAnswer: false,
-		OriginId:     mes.Id,
-		Function:     mes.Function,
-		Debug:        mes.Debug,
-		IsPathWriter: mes.IsPathWriter,
-		AnswerWait:   mes.AnswerWait,
-		Args:         args,
-	}
-	if retMes.Target == r.gnode.name {
-		r.receiveAnswer(retMes)
-	} else {
-		r.gnode.senderManager.sendMessage(retMes)
-	}
-	return nil
 }
 
 func (r *MessageReceiver) receiveAnswer(mes *AntMes) {
@@ -190,69 +120,4 @@ func (r *MessageReceiver) updateTrace(mes *AntMes) {
 		target:       localTarget,
 	}
 
-}
-
-func (r *MessageReceiver) convertFunctionArgs(f reflect.Value, name string, args []string) ([]reflect.Value, error) {
-	in := make([]reflect.Value, f.Type().NumIn())
-	in[0] = reflect.ValueOf(r.gnode)
-	if args != nil {
-		k := 0
-		for _, arg := range args {
-			atype := f.Type().In(k + 1)
-			val, err := r.unmarshal(arg, atype.String())
-			if err != nil {
-				return nil, fmt.Errorf("Error umarshaling arg %d on function %s: %v", k, name, err)
-			}
-			in[k+1] = val
-			k++
-		}
-	}
-	return in, nil
-}
-
-func (r *MessageReceiver) unmarshal(arg string, atype string) (reflect.Value, error) {
-	if atype == "int" {
-		val, err := strconv.Atoi(arg)
-		if err != nil {
-			return reflect.ValueOf(arg), fmt.Errorf("Argument: %s is not an int", arg)
-		}
-		return reflect.ValueOf(val), nil
-	} else if atype == "bool" {
-		if strings.ToLower(arg) == "true" {
-			return reflect.ValueOf(true), nil
-		}
-		return reflect.ValueOf(false), nil
-
-	} else if atype == "time.Time" {
-		val, err := time.Parse(time.RFC3339Nano, arg)
-		if err != nil {
-			return reflect.ValueOf(arg), fmt.Errorf("Argument: %s is not a time.Time", arg)
-		}
-		return reflect.ValueOf(val), nil
-	}
-	return reflect.ValueOf(arg), nil
-}
-
-func (r *MessageReceiver) marshal(val reflect.Value) (string, error) {
-	atype := val.Type().String()
-	if atype == "int" {
-		return fmt.Sprintf("%d", val.Int()), nil
-	}
-	if atype == "bool" {
-		return fmt.Sprintf("%t", val.Bool()), nil
-	}
-	return val.String(), nil
-}
-
-func (r *MessageReceiver) sendback(mes *AntMes, ret []reflect.Value) error {
-	args := []string{}
-	for _, val := range ret {
-		arg, err := r.marshal(val)
-		if err != nil {
-
-		}
-		args = append(args, arg)
-	}
-	//return g.sendMessage(mes.Origin, mes.Name, args...)
-	return nil
 }

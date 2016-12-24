@@ -15,7 +15,7 @@ func (api *AgridAPI) NodeClear(node string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := client.createSendMessage(node, true, "clear"); err != nil {
+	if _, err := client.createSendMessage(node, false, "clear"); err != nil {
 		return err
 	}
 	return nil
@@ -92,7 +92,7 @@ func (api *AgridAPI) NodeLs() ([]string, error) {
 	if err != nil {
 		return rep, err
 	}
-	_, errp := client.createSendMessage("*", false, "getConnections", "client")
+	_, errp := client.createSendMessage("*", false, "getConnections")
 	if errp != nil {
 		return rep, errp
 	}

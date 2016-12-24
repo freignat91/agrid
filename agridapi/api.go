@@ -123,7 +123,7 @@ func (api *AgridAPI) SetUser(user string, token string) {
 }
 
 // UserCreate create an user and return a token
-func (api *AgridAPI) UserCreate(name string) (string, error) {
+func (api *AgridAPI) UserCreate(name string, token string) (string, error) {
 	if err := api.verifyUserName(name); err != nil {
 		return "", fmt.Errorf("Invalide user name: %v", err)
 	}
@@ -131,8 +131,8 @@ func (api *AgridAPI) UserCreate(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	ret, errs := client.createSendMessage("*", true, "createUser", name)
-	if err != nil {
+	ret, errs := client.createSendMessage("*", true, "createUser", name, token)
+	if errs != nil {
 		return "", errs
 	}
 	return ret.Args[0], nil

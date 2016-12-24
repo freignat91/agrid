@@ -87,11 +87,11 @@ To authenticate a user a token a given at user creation by the cluster, this tok
 Agrid command lines implemented using the Agrid Go API
 
 ### create a user
-`agrid user create [username] <--unsecure>`
+`agrid user create [username] <--token>`
 
 Create a user with its own file space in the cluster. This command return a token used to authenticate the user when executing any other command
 - [username] the user name to create
-- <--unsecure> if this option exist, the user is not protected by a token
+- <--token> set the token for this user, without the token is computed by the server
 
 ### remove a user
 `agrid user remove [username] <--token>`

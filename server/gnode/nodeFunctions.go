@@ -12,25 +12,6 @@ type nodeFunctions struct {
 	gnode *GNode
 }
 
-var functionMap map[string]interface{}
-
-func initFunctionMap() {
-	functionMap = make(map[string]interface{})
-	functionMap["serviceInfo"] = serviceInfo
-	functionMap["setLogLevel"] = setLogLevel
-	functionMap["getConnections"] = getConnections
-	functionMap["killNode"] = killNode
-	functionMap["updateGrid"] = updateGrid
-	functionMap["writeStatsInLog"] = writeStatsInLog
-	functionMap["clear"] = clear
-	functionMap["forceGC"] = forceGC
-	functionMap["getNodeName"] = getNodeName
-	functionMap["createUser"] = createUser
-	functionMap["createNodeUser"] = createNodeUser
-	functionMap["removeUser"] = removeUser
-
-}
-
 func (n *nodeFunctions) ping(mes *AntMes) error {
 	logf.debug("execute ping from: %s\n", mes.Origin)
 	answer := n.gnode.createAnswer(mes)
@@ -69,89 +50,108 @@ func (n *nodeFunctions) pingFromTo(mes *AntMes) error {
 	return nil
 }
 
-// refactoring on going...
-
-func getNodeName(g *GNode, dec int) string {
-	index := g.nodeIndex + dec
-	if index >= len(g.nodeNameList) {
-		index = index - len(g.nodeNameList)
+func (n *nodeFunctions) setLogLevel(mes *AntMes) error {
+	if len(mes.Args) < 1 {
+		return fmt.Errorf("Number of argument error, need logLevel")
 	}
-	return g.nodeNameList[index]
-}
-
-func getConnections(g *GNode, name string) string {
-	ret := fmt.Sprintf("%s (%s): ", g.name, g.host)
-	for name, _ := range g.targetMap {
-		ret += (" " + name)
-	}
-	return ret
-}
-
-func serviceInfo(g *GNode) int {
-	return g.nbNode
-}
-
-func setLogLevel(g *GNode, level string) {
-	logf.setLevel(level)
+	logf.setLevel(mes.Args[0])
 	logf.printf("Set log level: " + logf.levelString())
+	return nil
 }
 
-func killNode(g *GNode) string {
+func (n *nodeFunctions) killNode(mes *AntMes) error {
 	time.AfterFunc(time.Second*3, func() {
 		os.Exit(0)
 	})
-	return g.host
+	return nil
 }
 
-func updateGrid(g *GNode, force bool) {
-	g.startupManager.updateGrid(false, force)
-}
-
-func writeStatsInLog(g *GNode) {
-	logf.printf("IdMap size: %d", g.idMap.Len())
-	g.receiverManager.stats()
-	g.senderManager.stats()
-}
-
-func clear(g *GNode) {
-	g.idMap.CleanUp()
-	g.fileManager.transferMap = make(map[string]*FileTransfer)
-	logf.info("Node cleared")
-	forceGC(g, true)
-	//stats := &runtime.MemStats{}
-	//runtime.ReadMemStats(stats)
-}
-
-func forceGC(g *GNode, verbose bool) {
-	if verbose {
-		//logf.info("GC forced")
+func (n *nodeFunctions) updateGrid(mes *AntMes) error {
+	force := false
+	if len(mes.Args) >= 1 && mes.Args[0] == "true" {
+		force = true
 	}
+	n.gnode.startupManager.updateGrid(false, force)
+	return nil
+}
+
+func (n *nodeFunctions) writeStatsInLog(mes *AntMes) error {
+	logf.printf("IdMap size: %d", n.gnode.idMap.Len())
+	n.gnode.receiverManager.stats()
+	n.gnode.senderManager.stats()
+	return nil
+}
+
+func (n *nodeFunctions) getConnections(mes *AntMes) error {
+	ret := fmt.Sprintf("%s (%s): ", n.gnode.name, n.gnode.host)
+	for name, _ := range n.gnode.targetMap {
+		ret += (" " + name)
+	}
+	answer := n.gnode.createAnswer(mes)
+	answer.Args = []string{ret}
+	n.gnode.senderManager.sendMessage(answer)
+	return nil
+}
+
+func (n *nodeFunctions) clear(mes *AntMes) error {
+	n.gnode.idMap.CleanUp()
+	n.gnode.fileManager.transferMap = make(map[string]*FileTransfer)
+	logf.info("Node cleared")
+	n.forceGC()
+	return nil
+}
+
+func (g *nodeFunctions) forceGC() {
 	debug.FreeOSMemory()
 	runtime.GC()
 }
 
-func createUser(g *GNode, userName string) string {
+func (n *nodeFunctions) createUser(mes *AntMes) error {
+	if len(mes.Args) < 1 {
+		return fmt.Errorf("Number of argument error, need userName")
+	}
+	userName := mes.Args[0]
+	token := ""
+	if len(mes.Args) >= 2 {
+		token = mes.Args[1]
+	}
 	logf.info("Received create user %s\n", userName)
-	token := g.getToken()
+	if token == "" {
+		token = n.gnode.getToken()
+	}
 	args := []string{userName, token}
-	g.senderManager.sendMessage(&AntMes{
+	err := n.gnode.createUser(userName, token)
+	if err != nil {
+		return err
+	}
+	n.gnode.senderManager.sendMessage(&AntMes{
 		Target:   "*",
-		Origin:   g.name,
+		Origin:   n.gnode.name,
 		Function: "createNodeUser",
 		Args:     args,
 	})
-	return token
+	answer := n.gnode.createAnswer(mes)
+	answer.Args = []string{token}
+	n.gnode.senderManager.sendMessage(answer)
+	return nil
 }
 
-func createNodeUser(g *GNode, userName string, token string) string {
-	err := g.createUser(userName, token)
-	if err != nil {
-		return err.Error()
+func (n *nodeFunctions) createNodeUser(mes *AntMes) error {
+	if len(mes.Args) < 2 {
+		return fmt.Errorf("Number of argument error, need userName, token")
 	}
-	return "done"
+	userName := mes.Args[0]
+	token := mes.Args[1]
+	err := n.gnode.createUser(userName, token)
+	if err != nil {
+		return err
+	}
+	answer := n.gnode.createAnswer(mes)
+	answer.Args = []string{token}
+	n.gnode.senderManager.sendMessage(answer)
+	return nil
 }
 
-func removeUser(g *GNode, userName string) string {
-	logf.info("Remove user %s\n", userName)
-	return ""
+func (n *nodeFunctions) removeUser(mes *AntMes) error {
+	return fmt.Errorf("remove user not implemented yet")
 }

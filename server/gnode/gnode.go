@@ -107,7 +107,6 @@ func (g *GNode) init() {
 	g.receiverManager.start(g, config.bufferSize, config.parallelReceiver)
 	g.senderManager.start(g, config.bufferSize, config.parallelSender)
 	g.host = os.Getenv("HOSTNAME")
-	initFunctionMap()
 	time.Sleep(3 * time.Second)
 }
 
@@ -262,7 +261,7 @@ func (g *GNode) sendBackClient(clientId string, mes *AntMes) {
 			Function: "forceGC",
 			Args:     []string{"false"},
 		})
-		forceGC(g, false)
+		g.nodeFunctions.forceGC()
 	}
 
 }
@@ -313,10 +312,10 @@ func (g *GNode) loadUser() error {
 	for _, fd := range fileList {
 		f, err := os.Open(path.Join(dir, fd.Name(), "token"))
 		if err == nil {
-			_, errR := f.Read(data)
+			n, errR := f.Read(data)
 			if errR == nil {
-				token := string(data)
-				logf.info("Add user %s\n", fd.Name())
+				token := string(data[0 : n-1])
+				logf.info("Add user %s token=[%s]\n", fd.Name(), token)
 				g.userMap[fd.Name()] = token
 			}
 		}

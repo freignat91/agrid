@@ -21,6 +21,7 @@ type ReceiverManager struct {
 
 func (m *ReceiverManager) loadFunctions() {
 	m.functionMap = make(map[string]interface{})
+	//file functions
 	m.functionMap["storeBlock"] = m.gnode.fileManager.storeBlock
 	m.functionMap["storeBlocAck"] = m.gnode.fileManager.storeBlockAck
 	m.functionMap["getFileBlocks"] = m.gnode.fileManager.sendBlocks
@@ -31,8 +32,18 @@ func (m *ReceiverManager) loadFunctions() {
 	m.functionMap["removeFiles"] = m.gnode.fileManager.removeFiles
 	m.functionMap["removeNodeFiles"] = m.gnode.fileManager.removeNodeFiles
 	m.functionMap["sendBackRemoveFilesToClient"] = m.gnode.fileManager.sendBackRemoveFilesToClient
+	//node Functions
 	m.functionMap["ping"] = m.gnode.nodeFunctions.ping
 	m.functionMap["pingFromTo"] = m.gnode.nodeFunctions.pingFromTo
+	m.functionMap["setLogLevel"] = m.gnode.nodeFunctions.setLogLevel
+	m.functionMap["killNode"] = m.gnode.nodeFunctions.killNode
+	m.functionMap["updateGrid"] = m.gnode.nodeFunctions.updateGrid
+	m.functionMap["writeStatsInLog"] = m.gnode.nodeFunctions.writeStatsInLog
+	m.functionMap["clear"] = m.gnode.nodeFunctions.clear
+	m.functionMap["getConnections"] = m.gnode.nodeFunctions.getConnections
+	m.functionMap["createUser"] = m.gnode.nodeFunctions.createUser
+	m.functionMap["createNodeUser"] = m.gnode.nodeFunctions.createNodeUser
+	m.functionMap["removeUser"] = m.gnode.nodeFunctions.removeUser
 }
 
 func (m *ReceiverManager) start(gnode *GNode, bufferSize int, maxGoRoutine int) {
@@ -129,7 +140,7 @@ func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamS
 				Function: "forceGC",
 				Args:     []string{"true"},
 			})
-			forceGC(m.gnode, true)
+			m.gnode.nodeFunctions.forceGC()
 			return
 		}
 		if err != nil {
@@ -140,7 +151,7 @@ func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamS
 				Function: "forceGC",
 				Args:     []string{"true"},
 			})
-			forceGC(m.gnode, true)
+			m.gnode.nodeFunctions.forceGC()
 			return
 		}
 		if mes.Function == "sendBlock" {
