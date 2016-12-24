@@ -108,8 +108,7 @@ Remove a user. All files in its file space should have been removed first
 - [target]: the full pathname of the file in the cluster
 - <--thread number>: optionally: number of threads used to store the file (default 1), each thread open a grpc connection on a distinct node.
 - <--key>: optionally: AES key to encrypt the file
-- <--user userName>: to store on the usee file space
-- <--token token>: token to authenticate the user (given at user creation)
+- <--user userName:token>: to store on the usee file space, token is given at token creation
 
 
 ### retrieve a file from cluster
@@ -121,15 +120,13 @@ Retrieve a file from cluster using duplicated blocks if some are missing
 - [target]: the full pathname of the file to write locally
 - <--thread>: optionally: number of threads used to retrieve the file (default 1), each thread open a grpc connection on a distinct node.
 - <--key>: optionally: AES key to encrypt the file
-- <--user userName>: to store on the usee file space
-- <--token token>: token to authenticate the user (given at user creation)
+- <--user userName:token>: to store on the usee file space, token is given at user creation
 
 ### list the files on the cluster
 
 `agrid file ls [path]`
 - [path]: path name on the cluster to list, default /
-- <--user userName>: to store on the usee file space
-- <--token token>: token to authenticate the user (given at user creation)
+- <--user userName:token>: to store on the usee file space, token is given at user creation
 
 
 ### remove a file on the cluster
@@ -137,8 +134,7 @@ Retrieve a file from cluster using duplicated blocks if some are missing
 `agrid file rm [pathname] <-r>`
 - [pathname]: full pathname of the file to remove on the cluster
 - <-r>: to remove a folder recursively
-- <--user userName>: to store on the usee file space
-- <--token token>: token to authenticate the user (given at user creation)
+- <--user userName:token>: to store on the usee file space, token is given at user creation
 
 ### list the cluster nodes
 

@@ -112,14 +112,14 @@ func (api *AgridAPI) formatKey(key string) string {
 }
 
 // SetUser define the current user
-func (api *AgridAPI) SetUser(user string, token string) {
-	if user == "" {
-		api.userName = "common"
-		api.userToken = ""
-		return
+func (api *AgridAPI) SetUser(user string) {
+	api.userName = "common"
+	api.userToken = ""
+	list := strings.Split(user, ":")
+	if len(list) == 2 {
+		api.userName = list[0]
+		api.userToken = list[1]
 	}
-	api.userName = user
-	api.userToken = token
 }
 
 // UserCreate create an user and return a token
