@@ -23,7 +23,7 @@ func (m *fileSender) init(api *AgridAPI) {
 	m.currentClient = 0
 }
 
-func (m *fileSender) storeFile(fileName string, target string, pMeta *[]string, nbThread int, key string) error {
+func (m *fileSender) storeFile(fileName string, target string, meta []string, nbThread int, key string) error {
 	key = m.api.formatKey(key)
 	f, err := os.Open(fileName)
 	if err != nil {
@@ -35,8 +35,6 @@ func (m *fileSender) storeFile(fileName string, target string, pMeta *[]string, 
 		return errs
 	}
 	length := st.Size()
-	m.initClients(nbThread)
-	defer m.close()
 	md5 := md5.New()
 	io.WriteString(md5, fileName)
 	tId := fmt.Sprintf("TF-%x-%d", md5.Sum(nil), time.Now().UnixNano())
@@ -45,11 +43,14 @@ func (m *fileSender) storeFile(fileName string, target string, pMeta *[]string, 
 	if length%blockSize > 0 {
 		totalBlock++
 	}
-	transferIds := []string{}
-	meta := []string{}
-	if pMeta != nil {
-		meta = *pMeta
+	m.api.info("store nbThread=%d nbBlock=%d\n", nbThread, totalBlock)
+	if nbThread > int(totalBlock) {
+		nbThread = int(totalBlock)
+		m.api.info("nbThread ajusted to: %d\n", nbThread)
 	}
+	m.initClients(nbThread)
+	defer m.close()
+	transferIds := []string{}
 
 	if key != "" {
 		m.api.info("Encrypted transfer\n")

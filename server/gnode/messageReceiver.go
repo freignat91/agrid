@@ -54,7 +54,7 @@ func (r *MessageReceiver) executeMessage(mes *AntMes) {
 	//Internal functions format: function(mes *AntMes) error
 	if function, ok := r.receiverManager.functionMap[mes.Function]; ok {
 		f := reflect.ValueOf(function)
-		logf.info("Execute function: %s\n", mes.Function)
+		//logf.info("Execute function: %s\n", mes.Function)
 		ret := f.Call([]reflect.Value{reflect.ValueOf(mes)})
 		//logf.info("function: %s return: %v\n", mes.Function, ret)
 		if ret[0].Interface() != nil {
@@ -74,7 +74,8 @@ func (r *MessageReceiver) receiveAnswer(mes *AntMes) {
 	if mes.Target == r.gnode.name {
 		logf.debugMes(mes, "answer reached its target: %v\n", mes.Id)
 		if mes.FromClient != "" {
-			if client, ok := r.gnode.clientMap[mes.FromClient]; ok {
+			if r.gnode.clientMap.exists(mes.FromClient) {
+				client := r.gnode.clientMap.get(mes.FromClient).(gnodeClient)
 				if err := client.stream.Send(mes); err != nil {
 					logf.error("Send back answer to client error: %v\n", err)
 					return
@@ -85,7 +86,7 @@ func (r *MessageReceiver) receiveAnswer(mes *AntMes) {
 			}
 		}
 		if mes.AnswerWait {
-			logf.info("answer originId=%s saved in receiveMap\n", mes.OriginId)
+			logf.debugMes(mes, "answer originId=%s saved in receiveMap\n", mes.OriginId)
 			r.receiverManager.answerMap[mes.OriginId] = mes
 			r.receiverManager.getChan <- mes.OriginId
 		}

@@ -36,6 +36,6 @@ func (m *agridCLI) userCreate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	m.pSuccess("User created %s token=%s\n", user, token)
+	m.pSuccess("User create: %s:%s\n", user, token)
 	return nil
 }

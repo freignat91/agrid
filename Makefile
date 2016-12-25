@@ -4,7 +4,7 @@ SHELL := /bin/sh
 BASEDIR := $(shell echo $${PWD})
 
 # build variables (provided to binaries by linker LDFLAGS below)
-VERSION := 0.1.2
+VERSION := 0.1.3
 BUILD := $(shell git rev-parse HEAD | cut -c1-8)
 
 LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
@@ -66,14 +66,14 @@ build:	install-client
 run: 	build
         @CID=$(shell docker run --net=host -d --name $(NAME) $(IMAGE)) && echo $${CID}
 
+test:   
+	@go test ./tests -v
+
 install-deps:
 	@glide install --strip-vcs --strip-vendor --update-vendored
 
 update-deps:
 	@glide update --strip-vcs --strip-vendor --update-vendored
-
-test:
-	@go run ./tests/main.go
 
 start:
 	@docker node inspect self > /dev/null 2>&1 || docker swarm inspect > /dev/null 2>&1 || (echo "> Initializing swarm" && docker swarm init --advertise-addr 127.0.0.1)

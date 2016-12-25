@@ -51,7 +51,7 @@ func (api *AgridAPI) FileLs(folder string) ([]string, error) {
 }
 
 // FileStore store a file in cluster
-func (api *AgridAPI) FileStore(localFile string, clusterPathname string, meta *[]string, nbThread int, key string) error {
+func (api *AgridAPI) FileStore(localFile string, clusterPathname string, meta []string, nbThread int, key string) error {
 	fileSender := fileSender{}
 	fileSender.init(api)
 	if err := fileSender.storeFile(localFile, clusterPathname, meta, nbThread, key); err != nil {

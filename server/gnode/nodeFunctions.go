@@ -119,6 +119,7 @@ func (n *nodeFunctions) createUser(mes *AntMes) error {
 	if token == "" {
 		token = n.gnode.getToken()
 	}
+	logf.info("Token [%s]\n", token)
 	args := []string{userName, token}
 	err := n.gnode.createUser(userName, token)
 	if err != nil {
@@ -142,8 +143,10 @@ func (n *nodeFunctions) createNodeUser(mes *AntMes) error {
 	}
 	userName := mes.Args[0]
 	token := mes.Args[1]
+	logf.info("Received create node user %s [%s]\n", userName, token)
 	err := n.gnode.createUser(userName, token)
 	if err != nil {
+		logf.error("createUser error: user=%s: %v\n", userName, err)
 		return err
 	}
 	n.gnode.senderManager.sendMessage(&AntMes{

@@ -222,7 +222,7 @@ func (f *FileManager) removeFiles(mes *AntMes) error {
 }
 
 func (f *FileManager) removeNodeFiles(mes *AntMes) error {
-	logf.info("Received removeNodeFiles: %v\n", mes)
+	//logf.info("Received removeNodeFiles: %v\n", mes)
 	filename := ""
 	if len(mes.Args) >= 1 {
 		filename = mes.Args[0]
@@ -232,18 +232,18 @@ func (f *FileManager) removeNodeFiles(mes *AntMes) error {
 		recursive = true
 	}
 	fullName := path.Join(f.gnode.dataPath, mes.UserName, filename)
-	logf.info("fuleName: %s\n", fullName)
+	//logf.info("fuleName: %s\n", fullName)
 	if _, err := os.Stat(fullName); err == nil {
-		logf.info("does exist: %s\n", fullName)
+		//logf.info("does exist: %s\n", fullName)
 		if !recursive {
 			return fmt.Errorf("Trying to remove a directory %s without recusive flag set", filename)
 		}
-		logf.info("remove all dir\n")
+		//logf.info("remove all dir\n")
 		if err := os.RemoveAll(fullName); err != nil {
 			return err
 		}
 	} else {
-		logf.info("remove all file\n")
+		//logf.info("remove all file\n")
 		if err := f.removeAgridFiles(fullName); err != nil {
 			return err
 		}
@@ -266,7 +266,7 @@ func (f *FileManager) removeAgridFiles(fullname string) error {
 	}
 	for _, file := range fileList {
 		if strings.HasPrefix(file.Name(), name) && strings.HasSuffix(file.Name(), GNodeFileSuffixe) {
-			logf.info("remove: %s/%s\n", dir, file.Name())
+			//logf.info("remove: %s/%s\n", dir, file.Name())
 			if err := os.RemoveAll(path.Join(dir, file.Name())); err != nil {
 				return err
 			}
@@ -285,10 +285,10 @@ func (f *FileManager) sendBackRemoveFilesToClient(mes *AntMes) error {
 // listFile
 
 func (f *FileManager) listFiles(mes *AntMes) error {
+	logf.info("Received listFile: %v\n", mes)
 	if !f.gnode.checkUser(mes.UserName, mes.UserToken) {
 		return fmt.Errorf("Invalid user/token")
 	}
-	//logf.info("Received listFile: %v\n", mes)
 	mes.Function = "listNodeFiles"
 	mes.Target = "*"
 	f.gnode.receiverManager.receiveMessage(mes)
@@ -302,7 +302,7 @@ func (f *FileManager) listNodeFiles(mes *AntMes) error {
 	if len(mes.Args) >= 1 {
 		folder = path.Join(mes.UserName, mes.Args[0])
 	}
-	logf.info("Receive listFiles on path %s\n", folder)
+	//logf.info("Receive listFiles on path %s\n", folder)
 	pathname := path.Join(config.rootDataPath, folder)
 	args := f.listFolder(mes, pathname, []string{})
 	f.sendListFilesBack(mes, args, true)

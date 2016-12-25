@@ -121,11 +121,11 @@ func (m *ReceiverManager) stats() {
 }
 
 func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamServer) {
-	clientName := fmt.Sprintf("client-%d", len(m.gnode.clientMap)+1)
-	m.gnode.clientMap[clientName] = &gnodeClient{
+	clientName := fmt.Sprintf("client-%d", m.gnode.clientMap.len()+1)
+	m.gnode.clientMap.set(clientName, gnodeClient{
 		name:   clientName,
 		stream: stream,
-	}
+	})
 	stream.Send(&AntMes{
 		Function:   "ClientAck",
 		FromClient: clientName,
@@ -135,7 +135,7 @@ func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamS
 		mes, err := stream.Recv()
 		if err == io.EOF {
 			logf.error("Client reader %s: EOF\n", clientName)
-			delete(m.gnode.clientMap, clientName)
+			m.gnode.clientMap.del(clientName)
 			m.gnode.senderManager.sendMessage(&AntMes{
 				Target:   "*",
 				Function: "forceGC",
@@ -146,7 +146,7 @@ func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamS
 		}
 		if err != nil {
 			logf.error("Client reader %s: Failed to receive message: %v\n", clientName, err)
-			delete(m.gnode.clientMap, clientName)
+			m.gnode.clientMap.del(clientName)
 			m.gnode.senderManager.sendMessage(&AntMes{
 				Target:   "*",
 				Function: "forceGC",

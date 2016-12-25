@@ -45,7 +45,6 @@ func (m *agridCLI) fileStore(cmd *cobra.Command, args []string) error {
 		m.Fatal("Invalid path: containing %s\n", gnode.GNodeFileSuffixe)
 	}
 	key := cmd.Flag("key").Value.String()
-	m.pSuccess("path: %s\n", targetedPath)
 	nbThread, err := strconv.Atoi(cmd.Flag("thread").Value.String())
 	if err != nil {
 		m.Fatal("Error option --thread is not a number: %s", cmd.Flag("thread").Value.String())
@@ -54,7 +53,7 @@ func (m *agridCLI) fileStore(cmd *cobra.Command, args []string) error {
 	api := agridapi.New(m.server)
 	m.setAPILogLevel(api)
 	api.SetUser(cmd.Flag("user").Value.String())
-	if api.FileStore(fileName, targetedPath, &meta, nbThread, key); err != nil {
+	if err := api.FileStore(fileName, targetedPath, meta, nbThread, key); err != nil {
 		return err
 	}
 	m.pSuccess("file %s stored as %s (%dms)\n", fileName, targetedPath, time.Now().Sub(t0).Nanoseconds()/1000000)

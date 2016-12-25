@@ -37,8 +37,8 @@ func (m *gnodeIdMap) Exists(id string) bool {
 }
 
 func (m *gnodeIdMap) CleanUp() {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 	//logf.info("Start idMap cleanup: %d\n", m.Len())
 	now := time.Now()
 	for id, lastTime := range m.valueMap {

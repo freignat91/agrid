@@ -131,7 +131,7 @@ func (api *AgridAPI) UserCreate(name string, token string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	ret, errs := client.createSendMessage("*", true, "createUser", name, token)
+	ret, errs := client.createSendMessage("", true, "createUser", name, token)
 	if errs != nil {
 		return "", errs
 	}
@@ -139,6 +139,9 @@ func (api *AgridAPI) UserCreate(name string, token string) (string, error) {
 }
 
 func (api *AgridAPI) verifyUserName(name string) error {
+	if name == "" || name == "common" {
+		return fmt.Errorf("Invalid user name")
+	}
 	if strings.IndexAny(name, " /\\") >= 0 {
 		return fmt.Errorf("Invalid character")
 	}
@@ -146,12 +149,17 @@ func (api *AgridAPI) verifyUserName(name string) error {
 }
 
 // UserRemove create an user
-func (api *AgridAPI) UserRemove(name string, token string, force bool) error {
+func (api *AgridAPI) UserRemove(name string, force bool) error {
+	api.SetUser(name)
+	defer func() {
+		api.userName = ""
+		api.userToken = ""
+	}()
 	client, err := api.getClient()
 	if err != nil {
 		return err
 	}
-	_, errs := client.createSendMessage("*", true, "removeUser", name, token, fmt.Sprintf("%t", force))
+	_, errs := client.createSendMessage("*", true, "removeUser", api.userName, api.userToken, fmt.Sprintf("%t", force))
 	if errs != nil {
 		return errs
 	}

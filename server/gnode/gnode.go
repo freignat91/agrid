@@ -29,7 +29,7 @@ type GNode struct {
 	nbNode          int
 	connectReady    bool
 	targetMap       map[string]*gnodeTarget
-	clientMap       map[string]*gnodeClient
+	clientMap       secureMap //map[string]*gnodeClient
 	receiverManager ReceiverManager
 	senderManager   SenderManager
 	startupManager  *gnodeLeader
@@ -93,7 +93,8 @@ func (g *GNode) Start(version string, build string) error {
 func (g *GNode) init() {
 	g.lockId = sync.RWMutex{}
 	g.traceMap = make(map[string]*gnodeTrace)
-	g.clientMap = make(map[string]*gnodeClient)
+	//g.clientMap = make(map[string]*gnodeClient)
+	g.clientMap.init()
 	g.targetMap = make(map[string]*gnodeTarget)
 	g.nbNode = config.nbNode
 	g.dataPath = config.rootDataPath
@@ -244,12 +245,12 @@ func (g *GNode) createAnswer(mes *AntMes) *AntMes {
 }
 
 func (g *GNode) sendBackClient(clientId string, mes *AntMes) {
-	client, ok := g.clientMap[clientId]
-	if !ok {
+	//client, ok := g.clientMap[clientId]
+	if !g.clientMap.exists(clientId) {
 		logf.error("Send to client error: client %s doesn't exist mes=%v", clientId, mes.Id)
 		return
 	}
-	//mes.Origin = g.name
+	client := g.clientMap.get(clientId).(gnodeClient)
 	client.usage++
 	if err := client.stream.Send(mes); err != nil {
 		logf.error("Error trying to send message to client %s: mes=%s: %s\n", clientId, mes.toString(), err)
@@ -286,7 +287,8 @@ func (g *GNode) createUser(userName string, token string) error {
 	logf.info("Create user %s\n", userName)
 	_, err := ioutil.ReadDir(path.Join(config.rootDataPath, userName))
 	if err == nil {
-		return fmt.Errorf("User %s already exist", userName)
+		g.loadOneUser(userName)
+		return fmt.Errorf("User %s : already exist", userName)
 	}
 	os.MkdirAll(path.Join(config.rootDataPath, userName), os.ModeDir)
 	file, errc := os.Create(path.Join(config.rootDataPath, userName, "token"))
@@ -297,6 +299,7 @@ func (g *GNode) createUser(userName string, token string) error {
 		return err
 	}
 	file.Close()
+	logf.info("Save user: %s:[%s]\n", userName, token)
 	g.userMap[userName] = token
 	return nil
 }
@@ -330,24 +333,25 @@ func (g *GNode) removeUser(userName string, token string, force bool) error {
 
 func (g *GNode) loadUser() error {
 	g.userMap = make(map[string]string)
-	dir := path.Join(config.rootDataPath)
-	fileList, err := ioutil.ReadDir(dir)
+	fileList, err := ioutil.ReadDir(config.rootDataPath)
 	if err != nil {
 		return err
 	}
-	data := make([]byte, 64, 64)
 	for _, fd := range fileList {
-		f, err := os.Open(path.Join(dir, fd.Name(), "token"))
-		if err == nil {
-			n, errR := f.Read(data)
-			if errR == nil {
-				token := string(data[0 : n-1])
-				logf.info("Add user %s\n", fd.Name())
-				g.userMap[fd.Name()] = token
-			}
-		}
+		g.loadOneUser(fd.Name())
 	}
 	return nil
+}
+
+func (g *GNode) loadOneUser(name string) {
+	data, err := ioutil.ReadFile(path.Join(config.rootDataPath, name, "token"))
+	if err != nil {
+		logf.error("loadOneUser user=%s: %v\n", name, err)
+		return
+	}
+	token := string(data)
+	logf.info("Add user %s [%s]\n", name, token)
+	g.userMap[name] = token
 }
 
 func (g *GNode) checkUser(user string, token string) bool {
@@ -355,6 +359,7 @@ func (g *GNode) checkUser(user string, token string) bool {
 		return true
 	}
 	check, ok := g.userMap[user]
+	logf.info("Check [%s] token [%s]\n", check, token)
 	if !ok {
 		return false
 	}

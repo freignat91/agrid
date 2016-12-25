@@ -24,11 +24,10 @@ func init() {
 }
 
 func (m *agridCLI) userRemove(cmd *cobra.Command, args []string) error {
-	if len(args) < 2 {
-		return fmt.Errorf("Error number of argument, needs [userName] [token]")
+	if len(args) < 1 {
+		return fmt.Errorf("Error number of argument, needs [user] format userName:token")
 	}
 	user := args[0]
-	token := args[1]
 	force := false
 	if cmd.Flag("force").Value.String() == "true" {
 		force = true
@@ -36,7 +35,7 @@ func (m *agridCLI) userRemove(cmd *cobra.Command, args []string) error {
 	m.pInfo("Execute: Remove user %s\n", user)
 	api := agridapi.New(m.server)
 	m.setAPILogLevel(api)
-	if err := api.UserRemove(user, token, force); err != nil {
+	if err := api.UserRemove(user, force); err != nil {
 		return err
 	}
 	m.pSuccess("User removed %s\n", user)

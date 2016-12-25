@@ -39,7 +39,7 @@ func (g *GNode) Ping(ctx context.Context, mes *AntMes) (*PingRet, error) {
 		Host:         g.host,
 		NbNode:       int32(g.nbNode),
 		NbDuplicate:  int32(config.nbDuplicate),
-		ClientNumber: int32(len(g.clientMap)),
+		ClientNumber: int32(g.clientMap.len()),
 	}, nil
 }
 

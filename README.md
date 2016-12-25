@@ -1,12 +1,12 @@
 # AGRID
 
-Agrid v0.1.2 experimental
+Agrid v0.1.3 experimental
 
 # Purpose
 
 Agrid is a high available file storage design to be easy to use and scale. Agrid can handle from 1 to several hundred storage nodes. Each file are cut and spread on nodes to be stored.
 
-Agrid is a docker service. It enough to pull its image or build it using `make build` and create the docker service to use it on a swarm cluster. It can be scale using docker service scale command.
+Agrid is a docker service. It enough to pull its image `freignat91/agrid:latest` or build it using `make build` and create the docker service to use it on a swarm cluster. It can be scale using docker service scale command.
 
 Agrid uses grpc protocol for communication between nodes and between nodes and clients. Under 20 nodes, all nodes are completely connected one to each other, up to 20 nodes Agrid create a grid and the communication between nodes are not direct anymore. 
 
@@ -94,12 +94,11 @@ Create a user with its own file space in the cluster. This command return a toke
 - <--token> set the token for this user, without the token is computed by the server
 
 ### remove a user
-`agrid user remove [username] [token] <--force>`
+`agrid user remove [username] <--force>`
 
 Remove a user. All files in its file space should have been removed first
 
-- [username] the user name to remove
-- [token] the user's token to authenticate the user
+- [username] the user name to remove, format userName:token
 - <--force> if this option exist then the user is removed with all its associated files, if not the user is removed only if its file space is empty.
 
 ### store a file on cluster:
@@ -168,12 +167,11 @@ Argument
 - name: the user name to create
 - token: if equal to "", the token is computed by server, if not it'sused as the user token.
 
-### func (api *AgridAPI) userRemove(name string, token string force bool) error
+### func (api *AgridAPI) userRemove(name string, force bool) error
 
 Remove a user
 Argument
-- name: the user name to remove
-- token: the user's token to authenticate the user
+- name: the user name to remove, format userName:token
 - force : if true the user is removed with all its associated files, if false the user is removed only if its file space is empty.
 
 ### func (api *AgridAPI) SetUser(user string)
@@ -239,6 +237,9 @@ Arguments:
 
 List the node of the cluster
 
+### tests
+
+execute: make test
 
 ## License
 

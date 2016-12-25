@@ -83,7 +83,7 @@ func (g *gnodeClient) startServerReader() error {
 				return
 			}
 			if err != nil {
-				g.api.error("Server stream error: %v\n", err)
+				g.api.debug("Server stream error: %v\n", err)
 				return
 			}
 			if mes.NoBlocking {
