@@ -27,9 +27,10 @@ func (api *AgridAPI) NodeKill(node string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := client.createSendMessage(node, true, "killNode"); err != nil {
+	if _, err := client.createSendMessage(node, false, "killNode"); err != nil {
 		return err
 	}
+	time.Sleep(3 * time.Second)
 	return nil
 }
 
@@ -99,8 +100,10 @@ func (api *AgridAPI) NodeLs() ([]string, error) {
 	nb := 0
 	t0 := time.Now()
 	for {
-		mes, ok := client.getNextAnswer(100)
-		if ok {
+		mes, err := client.getNextAnswer(100)
+		if err != nil {
+			return rep, err
+		} else {
 			nb++
 			rep = append(rep, mes.Args[0])
 		}

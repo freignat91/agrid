@@ -26,6 +26,7 @@ NAME :=  agrid
 TAG := latest
 
 IMAGE := $(OWNER)/$(NAME):$(TAG)
+IMAGETEST := $(OWNER)/$(NAME):test
 REPO := github.com/$(OWNER)/$(NAME)
 
 CLIENT := agrid
@@ -63,6 +64,10 @@ check:
 build:	install-client
 	@docker build -t $(IMAGE) .
 
+buildtest: install-client
+	@docker build -t $(IMAGETEST) .
+
+
 run: 	build
         @CID=$(shell docker run --net=host -d --name $(NAME) $(IMAGE)) && echo $${CID}
 
@@ -81,9 +86,19 @@ start:
 	@docker service create --network aNetwork --name agrid \
 	--publish 30103:30103 \
 	--mount type=bind,source=/home/freignat/data,target=/data \
-	--replicas=5 \
-	-e "NB_CONNECT=1" \
+	--replicas=3 \
 	$(IMAGE)
+
+
+starttest:
+	@docker node inspect self > /dev/null 2>&1 || docker swarm inspect > /dev/null 2>&1 || (echo "> Initializing swarm" && docker swarm init --advertise-addr 127.0.0.1)
+	@docker network ls | grep aNetwork || (echo "> Creating overlay network 'aNetwork'" && docker network create -d overlay aNetwork)
+	@docker service create --network aNetwork --name agrid \
+	--publish 30103:30103 \
+	--mount type=bind,source=/home/freignat/data,target=/data \
+	--replicas=1 \
+	$(IMAGETEST)
+
 stop:
 	@docker service rm agrid || true
 init:

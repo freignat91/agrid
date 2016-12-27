@@ -51,7 +51,10 @@ func (m *SenderManager) sendMessage(mes *AntMes) bool {
 		m.sender.sendMessage(mes)
 		return true
 	}
-	return m.buffer.put(mes)
+	if !m.buffer.put(mes) {
+		logf.warn("Buffer full message refused: %s\n", mes.toString())
+	}
+	return true
 }
 
 func (m *SenderManager) sendMessageReturnAnswer(mes *AntMes, timeoutSecond int) (*AntMes, error) {

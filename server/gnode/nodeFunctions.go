@@ -95,13 +95,19 @@ func (n *nodeFunctions) getConnections(mes *AntMes) error {
 
 func (n *nodeFunctions) clear(mes *AntMes) error {
 	n.gnode.idMap.CleanUp()
-	n.gnode.fileManager.transferMap = make(map[string]*FileTransfer)
+	n.gnode.fileManager.transferMap.clear()
 	logf.info("Node cleared")
 	n.forceGC()
 	return nil
 }
 
+func (n *nodeFunctions) forceGCMes(mes *AntMes) error {
+	n.forceGC()
+	return nil
+}
+
 func (g *nodeFunctions) forceGC() {
+	//logf.info("forceGC\n")
 	debug.FreeOSMemory()
 	runtime.GC()
 }

@@ -36,9 +36,7 @@ func (s *MessageSender) sendMessage(mes *AntMes) error {
 		mes.Origin = s.gnode.name
 	}
 	if mes.Target == s.gnode.name {
-		if !s.gnode.receiverManager.receiveMessage(mes) {
-			return fmt.Errorf("receiver buffer full mes id %s rejected\n", mes.Id)
-		}
+		s.gnode.receiverManager.receiveMessage(mes)
 		return nil
 	}
 	if !s.gnode.connectReady {

@@ -11,7 +11,7 @@ func (g *GNode) ExecuteFunction(ctx context.Context, mes *AntMes) (*AntRet, erro
 	if mes.Id == "" {
 		mes.Id = g.getNewId(false)
 		mes.Origin = g.name
-		//logf.debugMes(mes, "Received message from client: %v\n", mes)
+		//logf.debugMes(mes, "Received message from client: %v\n", mes.Id)
 	} else {
 		if ok := g.idMap.Exists(mes.Id); ok {
 			//logf.info("execute store bloc ack doublon id=%s order=%d\n", mes.Id, mes.Order)
@@ -19,10 +19,7 @@ func (g *GNode) ExecuteFunction(ctx context.Context, mes *AntMes) (*AntRet, erro
 		}
 		g.idMap.Add(mes.Id)
 	}
-	if ok := g.receiverManager.receiveMessage(mes); !ok {
-		logf.error("Message put error id=%s\n", mes.Id)
-		return g.getRet(mes.Id, false), nil
-	}
+	g.receiverManager.receiveMessage(mes)
 	return g.getRet(mes.Id, true), nil
 }
 

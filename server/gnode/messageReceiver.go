@@ -14,20 +14,18 @@ type MessageReceiver struct {
 
 func (r *MessageReceiver) start() {
 	go func() {
-		//log.Printf("Executor start: %d\n", e.id)
 		for {
-			//log.Printf("Executor %d wait for chan\n", e.id)
 			mes := <-r.receiverManager.ioChan
-			//log.Printf("Executor %d chan: %v\n", e.id, mes)
 			if mes != nil {
+				//logf.info("Receive message eff %v\n", mes.toString())
 				r.usage++
 				reached, stop := r.targetReached(mes)
 				if reached {
 					if mes.IsAnswer {
 						r.receiveAnswer(mes)
-						return
+					} else {
+						r.executeMessage(mes)
 					}
-					r.executeMessage(mes)
 				}
 				if !stop {
 					r.gnode.senderManager.sendMessage(mes)
@@ -75,7 +73,7 @@ func (r *MessageReceiver) receiveAnswer(mes *AntMes) {
 		logf.debugMes(mes, "answer reached its target: %v\n", mes.Id)
 		if mes.FromClient != "" {
 			if r.gnode.clientMap.exists(mes.FromClient) {
-				client := r.gnode.clientMap.get(mes.FromClient).(gnodeClient)
+				client := r.gnode.clientMap.get(mes.FromClient).(*gnodeClient)
 				if err := client.stream.Send(mes); err != nil {
 					logf.error("Send back answer to client error: %v\n", err)
 					return

@@ -1,6 +1,6 @@
 # AGRID
 
-Agrid v0.1.3 experimental
+Agrid v0.1.3
 
 # Purpose
 
@@ -37,7 +37,7 @@ Agrid use Ant like behavior to found the shortest path between two nodes. The pa
 - clone this project
 - execute `make install` to build the agrid command line executable
 - execute `make build` to create a image freignat91/agrid:latest
-- start the service: `make start` to create a service agrid using 5 nodes (change make start to execute directly the docker create service command to modify startup parameters)
+- start the service: `make start` to create a service agrid using 3 nodes (change make start to execute directly the docker create service command to modify startup parameters)
 
 for instance with 5 nodes, using a publish port 30103 and network aNetwork
 
@@ -109,6 +109,8 @@ Remove a user. All files in its file space should have been removed first
 - <--thread number>: optionally: number of threads used to store the file (default 1), each thread open a grpc connection on a distinct node.
 - <--key>: optionally: AES key to encrypt the file
 - <--user userName:token>: to store on the usee file space, token is given at token creation
+
+by default, the file is stored 3 times (config NB_DUPLICATE parameter default value)
 
 
 ### retrieve a file from cluster

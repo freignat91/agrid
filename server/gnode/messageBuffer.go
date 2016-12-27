@@ -12,7 +12,7 @@ type MessageBuffer struct {
 	out     int
 	lock    sync.RWMutex
 	ioChan  chan string
-	max     int
+	max     int //For stats
 }
 
 func (m *MessageBuffer) init(size int) {
@@ -23,6 +23,7 @@ func (m *MessageBuffer) init(size int) {
 }
 
 func (m *MessageBuffer) get(wait bool) (*AntMes, bool) {
+	//logf.info("BufferGet in=%d out=%d size=%d\n", m.in, m.out, m.size)
 	if m.size == 0 {
 		if wait {
 			m.ioChan <- "ok"
@@ -45,6 +46,7 @@ func (m *MessageBuffer) get(wait bool) (*AntMes, bool) {
 
 func (m *MessageBuffer) put(mes *AntMes) bool {
 	m.lock.Lock()
+	//logf.info("BufferPut in=%d out=%d size=%d\n", m.in, m.out, m.size)
 	defer m.lock.Unlock()
 	if m.size >= m.maxSize {
 		return false
@@ -73,9 +75,8 @@ func (m *MessageBuffer) incrIndex(index int) int {
 func (m *MessageBuffer) Clear() {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	for m.in != m.out {
-		m.values[m.out] = nil
-		m.out = m.incrIndex(m.out)
+	for i, _ := range m.values {
+		m.values[i] = nil
 	}
 	m.in = 0
 	m.out = 0

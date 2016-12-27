@@ -162,10 +162,12 @@ func (g *gnodeLeader) setIpList() {
 	}
 	logf.info("NodeNamelist: %v\n", g.gnode.nodeNameList)
 	logf.info("Node index: %d\n", g.gnode.nodeIndex)
-	if config.nbDuplicate > len(g.gnode.nodeNameList) {
-		config.nbDuplicate = len(g.gnode.nodeNameList)
-		logf.info("Nb duplicate set to %d\n", config.nbDuplicate)
-	}
+	/*
+		if config.nbDuplicate > len(g.gnode.nodeNameList) {
+			config.nbDuplicate = len(g.gnode.nodeNameList)
+			logf.info("Nb duplicate set to %d\n", config.nbDuplicate)
+		}
+	*/
 }
 
 func (g *gnodeLeader) connectNodes() {

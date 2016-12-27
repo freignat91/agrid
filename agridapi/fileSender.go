@@ -48,7 +48,9 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 		nbThread = int(totalBlock)
 		m.api.info("nbThread ajusted to: %d\n", nbThread)
 	}
-	m.initClients(nbThread)
+	if err := m.initClients(nbThread); err != nil {
+		return err
+	}
 	defer m.close()
 	transferIds := []string{}
 
@@ -116,14 +118,16 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 		block.Order++
 		client := m.getNextClient()
 		block.TransferId = transferIds[m.currentClient]
+		m.api.info("Send block order %d/%d\n", block.Order, totalBlock)
 		client.sendMessage(block, false)
 	}
 	nbOk := 0
+	m.api.info("Waiting for cluster ack\n")
 	for {
 		for _, client := range m.clients {
-			mes, ok := client.getNextAnswer(30000)
-			if !ok {
-				return fmt.Errorf("file %s storage timeout", fileName)
+			mes, err := client.getNextAnswer(30000)
+			if err != nil {
+				return err
 			}
 			if mes.Function == "FileSendAck" {
 				nbOk++
@@ -135,6 +139,7 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 			break
 		}
 	}
+	m.api.info("Cluster thread ack received\n")
 	return nil
 }
 

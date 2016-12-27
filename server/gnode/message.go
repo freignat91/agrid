@@ -18,5 +18,5 @@ func NewAntMes(target string, returnAnswer bool, functionName string, args ...st
 }
 
 func (a *AntMes) toString() string {
-	return fmt.Sprintf("mes=%s:%s->%s:%s", a.Id, a.Origin, a.Target, a.Function)
+	return fmt.Sprintf("mes=%s:%s->%s:%s (tf=%s or=%d)", a.Id, a.Origin, a.Target, a.Function, a.TransferId, a.Order)
 }

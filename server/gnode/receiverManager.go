@@ -3,6 +3,7 @@ package gnode
 import (
 	"fmt"
 	"io"
+	"sync"
 	"time"
 )
 
@@ -16,6 +17,7 @@ type ReceiverManager struct {
 	receiver     MessageReceiver
 	answerMap    map[string]*AntMes
 	getChan      chan string
+	lockClient   sync.RWMutex
 	functionMap  map[string]interface{}
 }
 
@@ -40,6 +42,7 @@ func (m *ReceiverManager) loadFunctions() {
 	m.functionMap["updateGrid"] = m.gnode.nodeFunctions.updateGrid
 	m.functionMap["writeStatsInLog"] = m.gnode.nodeFunctions.writeStatsInLog
 	m.functionMap["clear"] = m.gnode.nodeFunctions.clear
+	m.functionMap["forceGC"] = m.gnode.nodeFunctions.forceGCMes
 	m.functionMap["getConnections"] = m.gnode.nodeFunctions.getConnections
 	m.functionMap["createUser"] = m.gnode.nodeFunctions.createUser
 	m.functionMap["createNodeUser"] = m.gnode.nodeFunctions.createNodeUser
@@ -50,6 +53,7 @@ func (m *ReceiverManager) loadFunctions() {
 func (m *ReceiverManager) start(gnode *GNode, bufferSize int, maxGoRoutine int) {
 	m.gnode = gnode
 	m.loadFunctions()
+	m.lockClient = sync.RWMutex{}
 	m.nbReceiver = maxGoRoutine
 	m.buffer.init(bufferSize)
 	m.ioChan = make(chan *AntMes)
@@ -72,6 +76,7 @@ func (m *ReceiverManager) start(gnode *GNode, bufferSize int, maxGoRoutine int) 
 	go func() {
 		for {
 			mes, ok := m.buffer.get(true)
+			//logf.info("Receive message ok=%t %v\n", ok, mes.toString())
 			if ok && mes != nil {
 				m.ioChan <- mes
 			}
@@ -101,14 +106,26 @@ func (m *ReceiverManager) waitForAnswer(id string, timeoutSecond int) (*AntMes, 
 	}
 }
 
-func (m *ReceiverManager) receiveMessage(mes *AntMes) bool {
-	m.usage++
-	logf.debugMes(mes, "receive message: %s\n", mes.toString())
-	if m.nbReceiver <= 0 {
-		m.receiver.executeMessage(mes)
-		return true
+func (m *ReceiverManager) receiveMessage(mes *AntMes) {
+	refused := false
+	for {
+		m.usage++
+		logf.debugMes(mes, "recceive message: %s\n", mes.toString())
+		if m.nbReceiver <= 0 {
+			m.receiver.executeMessage(mes)
+			return
+		}
+		if m.buffer.put(mes) {
+			if refused {
+				logf.warn("Received message: message re-accepted: %v\n", mes.Id)
+			}
+			refused = false
+			return
+		}
+		logf.warn("Received message: buffer full, message temporary refused: %v\n", mes.toString())
+		refused = true
+		time.Sleep(1 * time.Second)
 	}
-	return m.buffer.put(mes)
 }
 
 func (m *ReceiverManager) stats() {
@@ -121,8 +138,9 @@ func (m *ReceiverManager) stats() {
 }
 
 func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamServer) {
-	clientName := fmt.Sprintf("client-%d", m.gnode.clientMap.len()+1)
-	m.gnode.clientMap.set(clientName, gnodeClient{
+	m.lockClient.Lock()
+	clientName := fmt.Sprintf("client-%d-%d", time.Now().UnixNano(), m.gnode.clientMap.len()+1)
+	m.gnode.clientMap.set(clientName, &gnodeClient{
 		name:   clientName,
 		stream: stream,
 	})
@@ -131,6 +149,7 @@ func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamS
 		FromClient: clientName,
 	})
 	logf.info("Client stream open: %s\n", clientName)
+	m.lockClient.Unlock() //unlock far to be sure to have several nano
 	for {
 		mes, err := stream.Recv()
 		if err == io.EOF {
@@ -156,7 +175,12 @@ func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamS
 			return
 		}
 		if mes.Function == "sendBlock" {
-			m.gnode.fileManager.receiveBlocFromClient(mes)
+			if err := m.gnode.fileManager.receiveBlocFromClient(mes); err != nil {
+				stream.Send(&AntMes{
+					Function: "sendBlock",
+					ErrorMes: err.Error(),
+				})
+			}
 		} else {
 			mes.Id = m.gnode.getNewId(false)
 			mes.Origin = m.gnode.name
@@ -166,12 +190,12 @@ func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamS
 				logf.debugMes(mes, "Receive mes from client %s : %v\n", clientName, mes)
 			}
 			m.gnode.idMap.Add(mes.Id)
-			if ok := m.gnode.receiverManager.receiveMessage(mes); !ok {
-				logf.error("Message put error id=%s\n", mes.Id)
-			}
-			if !mes.ReturnAnswer {
-				stream.Send(&AntMes{Origin: m.gnode.name})
-			}
+			m.gnode.receiverManager.receiveMessage(mes)
+			/*
+				if !mes.ReturnAnswer {
+					stream.Send(&AntMes{Origin: m.gnode.name})
+				}
+			*/
 		}
 	}
 }

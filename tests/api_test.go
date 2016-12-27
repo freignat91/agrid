@@ -16,6 +16,7 @@ var api *agridapi.AgridAPI
 
 func TestMain(m *testing.M) {
 	api = agridapi.New(server)
+	api.SetLogLevel("info")
 	os.Exit(m.Run())
 }
 
@@ -83,11 +84,11 @@ func executeTest(t *testing.T, nbThread int, key string, fileName string) {
 		t.Fatalf("FileStore error: %v\n", err)
 	}
 	//retrieve file
-	if err := api.FileRetrieve("/test/ws.txt", "/tmp/test1.txt", nbThread, key); err != nil {
-		t.Fatalf("FileStore error: %v\n", err)
+	if err := api.FileRetrieve("/test/ws.txt", "/tmp/test.txt", nbThread, key); err != nil {
+		t.Fatalf("FileRetrieve error: %v\n", err)
 	}
 	//Read and verify data file
-	data, err := ioutil.ReadFile("/tmp/test1.txt")
+	data, err := ioutil.ReadFile("/tmp/test.txt")
 	if err != nil {
 		t.Fatalf("FileRetrieve file read error : %v\n", err)
 	}

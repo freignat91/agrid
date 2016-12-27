@@ -13,6 +13,7 @@ func (api *AgridAPI) FileLs(folder string) ([]string, error) {
 	if err != nil {
 		return lineList, err
 	}
+	defer client.close()
 	if _, err := client.createSendMessage("*", false, "listFiles", folder); err != nil {
 		return lineList, err
 	}
@@ -20,11 +21,10 @@ func (api *AgridAPI) FileLs(folder string) ([]string, error) {
 	listMap := make(map[string]byte)
 	t0 := time.Now()
 	for {
-		mes, ok := client.getNextAnswer(1000)
-		if ok {
-			if mes.ErrorMes != "" {
-				return lineList, fmt.Errorf("%s", mes.ErrorMes)
-			}
+		mes, err := client.getNextAnswer(1000)
+		if err != nil {
+			return lineList, err
+		} else {
 			for _, line := range mes.Args {
 				listMap[line] = 1
 			}
@@ -76,17 +76,17 @@ func (api *AgridAPI) FileRm(clusterPathname string, recursive bool) error {
 	if err != nil {
 		return err
 	}
+	defer client.close()
 	if _, err := client.createSendMessage("*", false, "removeFiles", clusterPathname, fmt.Sprintf("%t", recursive)); err != nil {
 		return err
 	}
 	t0 := time.Now()
 	nbOk := 0
 	for {
-		mes, ok := client.getNextAnswer(1000)
-		if ok {
-			if mes.ErrorMes != "" {
-				return fmt.Errorf("%s", mes.ErrorMes)
-			}
+		mes, err := client.getNextAnswer(1000)
+		if err != nil {
+			return err
+		} else {
 			api.info("Receive answer: %v\n", mes.Origin)
 			if len(mes.Args) > 0 {
 				return fmt.Errorf("%s", mes.Args[0])

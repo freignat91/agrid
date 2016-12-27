@@ -15,7 +15,6 @@ type fileReceiver struct {
 	cipher      *gCipher
 	chanReceive chan string
 	writeLock   sync.RWMutex
-	orderMap    map[int]byte
 }
 
 func (m *fileReceiver) init(api *AgridAPI) {
@@ -38,15 +37,19 @@ func (m *fileReceiver) retrieveFile(clusterFile string, localFile string, nbThre
 			return fmt.Errorf("Cipher init error: %v", err)
 		}
 	}
-	m.orderMap = make(map[int]byte)
 	for thread := 0; thread < nbThread; thread++ {
 		m.retrieveFileThread(clusterFile, thread, nbThread, key, file)
 	}
+	nbThreadEnded := 0
 	for {
 		ret := <-m.chanReceive
 		if ret == "ok" {
-			return nil
-		} else if ret != "thread ok" {
+			nbThreadEnded++
+			m.api.info("NbThread completed: %d\n", nbThreadEnded)
+			if nbThreadEnded == nbThread {
+				return nil
+			}
+		} else {
 			return fmt.Errorf("%s", ret)
 		}
 	}
@@ -59,8 +62,8 @@ func (m *fileReceiver) retrieveFileThread(clusterFile string, thread int, nbThre
 			m.chanReceive <- err.Error()
 			return
 		}
+		defer client.close()
 		currentDuplicate := 1
-		nbNodeEnded := 0
 		req := &gnode.RetrieveFileRequest{
 			Name:      clusterFile,
 			ClientId:  client.id,
@@ -76,82 +79,81 @@ func (m *fileReceiver) retrieveFileThread(clusterFile string, thread int, nbThre
 		}
 		blockSize := int64(gnode.GNodeBlockSize * 1024)
 		nbBlock := int64(0)
+		totalBlock := int64(0)
+		orderThreadMap := make(map[int]byte)
 		timer := time.AfterFunc(time.Millisecond*time.Duration(30000), func() {
-			currentDuplicate++
-			if currentDuplicate > client.nbDuplicate {
-				m.chanReceive <- "retrieve file timeout"
-			}
-			if ret := m.nodeEndedOrTimeout(client, currentDuplicate, req, nbThread, thread, int(nbBlock)); ret {
-				return
+			for {
+				currentDuplicate++
+				if currentDuplicate > client.nbDuplicate {
+					m.chanReceive <- "retrieve file timeout"
+					return
+				}
+				if ret := m.nodeEndedOrTimeout(orderThreadMap, client, currentDuplicate, req, nbThread, thread, int(totalBlock)); ret {
+					return
+				}
+				time.Sleep(10 * time.Second)
 			}
 		})
 		nb := 0
 		for {
 			mes, _ := client.getNextAnswer(0)
-			if mes.Eof {
-				m.api.info("Received node %s EOF\n", mes.Origin)
-				nbNodeEnded++
-				if nbNodeEnded >= client.nbNode {
-					m.api.info("Received nodes EOF\n")
-					currentDuplicate++
-					if currentDuplicate > client.nbDuplicate {
-						if len(m.orderMap) == 0 {
-							m.chanReceive <- "file doesn't exist"
-						} else {
-							m.chanReceive <- "missing blocks to complete file"
-						}
-						return
-					}
-					nbNodeEnded = 0
-					if ret := m.nodeEndedOrTimeout(client, currentDuplicate, req, nbThread, thread, int(nbBlock)); ret {
-						return
+			if nbBlock == 0 {
+				totalBlock = mes.NbBlock
+				nbBlock = totalBlock / int64(nbThread)
+				if thread != 0 && totalBlock%int64(nbThread) >= int64(thread) {
+					nbBlock++
+				}
+				m.api.info("Thread %d nbBlock to receive: %d/%d", thread, nbBlock, totalBlock)
+				if nbThread >= int(nbBlock) {
+					if (thread == 0 && nbBlock != 1) || thread > int(nbBlock) {
+						m.api.info("Thread %d not useful concidering the number of blocks\n", thread)
+						break
 					}
 				}
-			} else {
-				if nbBlock == 0 {
-					nbBlock = mes.NbBlock
-				}
-				if m.cipher != nil {
-					dat, err := m.cipher.decrypt(mes.Data)
-					if err != nil {
-						m.chanReceive <- err.Error()
-						return
-					}
-					mes.Data = dat
-				}
-				m.writeLock.Lock()
-				if _, err := file.Seek((mes.Order-1)*blockSize, 0); err != nil {
-					m.chanReceive <- err.Error()
-					return
-				}
-				if _, err := file.Write(mes.Data); err != nil {
-					m.chanReceive <- err.Error()
-					return
-				}
-				nb++
-				if nb%100 == 0 {
-					file.Sync()
-				}
-				m.orderMap[int(mes.Order)] = 1
-				if len(m.orderMap) == int(nbBlock) {
-					m.api.info("Thread %d received last mes %d/%d (%d)\n", thread, mes.Order, mes.NbBlock, len(m.orderMap))
-					break
-				}
-				m.writeLock.Unlock()
-				m.api.info("Thread %d received mes %d/%d (%d)\n", thread, mes.Order, mes.NbBlock, len(m.orderMap))
 			}
-			timer.Reset(time.Millisecond * 30000)
+			if m.cipher != nil {
+				dat, err := m.cipher.decrypt(mes.Data)
+				if err != nil {
+					m.chanReceive <- err.Error()
+					return
+				}
+				mes.Data = dat
+			}
+			m.writeLock.Lock()
+			if _, err := file.Seek((mes.Order-1)*blockSize, 0); err != nil {
+				m.writeLock.Unlock()
+				m.chanReceive <- err.Error()
+				return
+			}
+			if _, err := file.Write(mes.Data); err != nil {
+				m.writeLock.Unlock()
+				m.chanReceive <- err.Error()
+				return
+			}
+			m.writeLock.Unlock()
+			nb++
+			if nb%100 == 0 {
+				file.Sync()
+			}
+			orderThreadMap[int(mes.Order)] = 1
+			if len(orderThreadMap) == int(nbBlock) {
+				m.api.info("Thread %d received last mes %d/%d (%d)\n", thread, len(orderThreadMap), nbBlock, mes.Order)
+				break
+			}
+			m.api.info("Thread %d received mes %d/%d (%d)\n", thread, len(orderThreadMap), nbBlock, mes.Order)
+			timer.Reset(time.Millisecond * 20000)
 		}
 		timer.Stop()
+		m.api.info("Thread %d completed\n", thread)
 		m.chanReceive <- "ok"
 		return
 	}()
 }
 
-func (m *fileReceiver) nodeEndedOrTimeout(client *gnodeClient, currentDuplicate int, req *gnode.RetrieveFileRequest, nbThread int, thread int, nbBlock int) bool {
+func (m *fileReceiver) nodeEndedOrTimeout(orderMap map[int]byte, client *gnodeClient, currentDuplicate int, req *gnode.RetrieveFileRequest, nbThread int, thread int, nbBlock int) bool {
 	blockList := ""
 	if nbBlock > 0 {
-		blockList = m.getThreadBlockList(nbThread, thread, int(nbBlock))
+		blockList = m.getThreadBlockList(orderMap, nbThread, thread, int(nbBlock))
 		if blockList == "#" {
 			m.api.info("Thread %d completed\n", thread)
 			m.chanReceive <- "thread ok"
@@ -168,16 +170,14 @@ func (m *fileReceiver) nodeEndedOrTimeout(client *gnodeClient, currentDuplicate 
 	return false
 }
 
-func (m *fileReceiver) getThreadBlockList(nbThread int, thread int, nbBlock int) string {
-	m.writeLock.Lock()
+func (m *fileReceiver) getThreadBlockList(orderMap map[int]byte, nbThread int, thread int, totalBlock int) string {
 	list := "#"
-	for block := 1; block <= nbBlock; block++ {
+	for block := 1; block <= totalBlock; block++ {
 		if block%nbThread == thread {
-			if _, ok := m.orderMap[block]; !ok {
+			if _, ok := orderMap[block]; !ok {
 				list = fmt.Sprintf("%s%d#", list, block)
 			}
 		}
 	}
-	m.writeLock.Unlock()
 	return list
 }

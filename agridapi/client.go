@@ -140,23 +140,23 @@ func (g *gnodeClient) sendMessage(mes *gnode.AntMes, wait bool) (*gnode.AntMes, 
 	return nil, nil
 }
 
-func (g *gnodeClient) getNextAnswer(timeout int) (*gnode.AntMes, bool) {
+func (g *gnodeClient) getNextAnswer(timeout int) (*gnode.AntMes, error) {
 	if timeout > 0 {
 		timer := time.AfterFunc(time.Millisecond*time.Duration(timeout), func() {
-			g.recvChan <- &gnode.AntMes{Function: "timeout"}
+			g.recvChan <- &gnode.AntMes{ErrorMes: "timeout"}
 		})
 		mes := <-g.recvChan
 		timer.Stop()
 		if mes == nil {
-			return nil, false
+			return nil, fmt.Errorf("Receive nil")
 		}
-		if timeout > 0 && mes.Function == "timeout" {
-			return nil, false
+		if mes.ErrorMes != "" {
+			return nil, fmt.Errorf("Error: %s", mes.ErrorMes)
 		}
-		return mes, true
+		return mes, nil
 	}
 	mes := <-g.recvChan
-	return mes, true
+	return mes, nil
 }
 
 func (g *gnodeClient) close() {

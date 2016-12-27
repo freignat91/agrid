@@ -19,7 +19,7 @@ const GNodeBlockSize = 512
 
 type FileManager struct {
 	gnode          *GNode
-	transferMap    map[string]*FileTransfer
+	transferMap    secureMap //map[string]*FileTransfer
 	transferNumber int
 }
 
@@ -42,7 +42,7 @@ type FileTransfer struct {
 
 func (f *FileManager) init(gnode *GNode) {
 	f.gnode = gnode
-	f.transferMap = make(map[string]*FileTransfer)
+	f.transferMap.init()
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------------
@@ -68,16 +68,16 @@ func (f *FileManager) storeFile(req *StoreFileRequest) (*StoreFileRet, error) {
 		userName:      req.UserName,
 		userToken:     req.UserToken,
 	}
-	f.transferMap[req.TransferId] = transfer
-	logf.info("sendFile received: req=%+v\n", req)
+	f.transferMap.set(req.TransferId, transfer)
+	logf.info("storeFile received: req=%v\n", req)
 	return &StoreFileRet{}, nil
 }
 
 func (f *FileManager) receiveBlocFromClient(mes *AntMes) error {
-	transfer, ok := f.transferMap[mes.TransferId]
-	if !ok {
+	if !f.transferMap.exists(mes.TransferId) {
 		return fmt.Errorf("Received bloc from client on a not started transfert")
 	}
+	transfer := f.transferMap.get(mes.TransferId).(*FileTransfer)
 	pos := int(rand.Int31n(int32(len(f.gnode.nodeNameList))))
 	if pos == f.gnode.nodeIndex && len(f.gnode.nodeNameList) > 3 {
 		pos = pos + int(rand.Int31n(int32(len(f.gnode.nodeNameList)-1)))
@@ -102,7 +102,7 @@ func (f *FileManager) receiveBlocFromClient(mes *AntMes) error {
 			UserName:     transfer.userName,
 			UserToken:    transfer.userToken,
 		}
-		//logf.info("Send client order %d to %s\n", mes.Order, f.gnode.nodeNameList[pos])
+		//logf.info("Send client tf=%s order %d to %s\n", mes.TransferId, mes.Order, f.gnode.nodeNameList[pos])
 		f.gnode.senderManager.sendMessage(block)
 		pos++
 		if pos >= len(f.gnode.nodeNameList) {
@@ -119,10 +119,11 @@ func (f *FileManager) receiveBlocFromClient(mes *AntMes) error {
 }
 
 func (f *FileManager) storeBlockAck(mes *AntMes) error {
-	transfer, ok := f.transferMap[mes.TransferId]
-	if !ok {
+	//logf.info("StoreBlockAck tf=%s order %d\n", mes.TransferId, mes.Order)
+	if !f.transferMap.exists(mes.TransferId) {
 		return fmt.Errorf("Received bloc ack on a not started transfert")
 	}
+	transfer := f.transferMap.get(mes.TransferId).(*FileTransfer)
 	transfer.lockAck.Lock()
 	defer transfer.lockAck.Unlock()
 	order := int(mes.Order)
@@ -145,21 +146,23 @@ func (f *FileManager) storeBlockAck(mes *AntMes) error {
 
 func (f *FileManager) sendBackStoreMessageToClient(transfer *FileTransfer) {
 	if transfer.terminated {
-		logf.info("All store block ack received. File store done\n")
-		delete(f.transferMap, transfer.id)
+		logf.info("All store block ack received. File store tf=%s done\n", transfer.id)
 		f.gnode.sendBackClient(transfer.clientId, &AntMes{
-			Function: "FileSendAck",
+			Function:   "FileSendAck",
+			TransferId: transfer.id,
 		})
+		f.transferMap.del(transfer.id)
 	} else {
 		f.gnode.sendBackClient(transfer.clientId, &AntMes{
 			Function:   "FileSendOngoing",
+			TransferId: transfer.id,
 			NoBlocking: true,
 		})
 	}
 }
 
 func (f *FileManager) storeBlock(mes *AntMes) error {
-	//logf.info("bloc data stored order=%d\n", mes.Order)
+	//logf.info("StoreBlock tf=%s order %d\n", mes.TransferId, mes.Order)
 	err := f.writeBlock(mes)
 	if err != nil {
 		logf.error("Error writting block order %d: %v\n", mes.Order, err)
@@ -176,7 +179,7 @@ func (f *FileManager) storeBlock(mes *AntMes) error {
 func (f *FileManager) writeBlock(mes *AntMes) error {
 	dir := fmt.Sprintf("%s.%d%s", path.Join(f.gnode.dataPath, mes.UserName, mes.TargetedPath), mes.Duplicate, GNodeFileSuffixe)
 	os.MkdirAll(dir, os.ModeDir)
-	name := fmt.Sprintf("b.%d.%d", mes.Order, mes.NbBlockTotal)
+	name := fmt.Sprintf("b.%s.%d", f.formatOrder(mes.Order), mes.NbBlockTotal)
 	//logf.info("writeblock: %s / %s\n", dir, name)
 	file, err := os.Create(path.Join(dir, name))
 	if err != nil {
@@ -204,6 +207,19 @@ func (f *FileManager) writeBlock(mes *AntMes) error {
 		}
 	}
 	return nil
+}
+
+func (f *FileManager) formatOrder(order int64) string {
+	if order < 10 {
+		return fmt.Sprintf("0000%d", order)
+	} else if order < 100 {
+		return fmt.Sprintf("000%d", order)
+	} else if order < 1000 {
+		return fmt.Sprintf("00%d", order)
+	} else if order < 10000 {
+		return fmt.Sprintf("0%d", order)
+	}
+	return fmt.Sprintf("%d", order)
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------------
@@ -367,7 +383,7 @@ func (f *FileManager) retrieveFile(req *RetrieveFileRequest) (*RetrieveFileRet, 
 	md5 := md5.New()
 	io.WriteString(md5, req.Name)
 	transferId := fmt.Sprintf("TF-%x-%d", md5.Sum(nil), time.Now().UnixNano())
-	logf.info("Received getFile: transferId=%s req=%v\n", transferId, req)
+	logf.info("retrieveFile received: transferId=%s req=%v\n", transferId, req)
 	transfer := &FileTransfer{
 		clientId:      req.ClientId,
 		id:            transferId,
@@ -375,7 +391,7 @@ func (f *FileManager) retrieveFile(req *RetrieveFileRequest) (*RetrieveFileRet, 
 		lastClientMes: time.Now(),
 		orderMap:      make(map[int]byte),
 	}
-	f.transferMap[transferId] = transfer
+	f.transferMap.set(transferId, transfer)
 	mes := &AntMes{
 		Target:       "*",
 		Function:     "getFileBlocks",
@@ -395,7 +411,7 @@ func (f *FileManager) retrieveFile(req *RetrieveFileRequest) (*RetrieveFileRet, 
 }
 
 func (f *FileManager) sendBlocks(mes *AntMes) error {
-	//logf.info("sendBlock: %s\n", mes.toString())
+	//logf.info("sendBlocks tf:%s  cl: %s order:%d\n", mes.TransferId, mes.FromClient, mes.Order)
 	fileName := fmt.Sprintf("%s.%d%s", path.Join(f.gnode.dataPath, mes.UserName, mes.TargetedPath), mes.Duplicate, GNodeFileSuffixe)
 	nbThread := int(mes.NbThread)
 	thread := int(mes.Thread)
@@ -428,21 +444,13 @@ func (f *FileManager) sendBlocks(mes *AntMes) error {
 							logf.error("Error reading file %s\n", name)
 						}
 						mesr.Data = mesr.Data[:nn]
-						//logf.info("sendBlock order=%d\n", order)
+						//logf.info("sendBlock transferId=%s order=%d\n", mes.TransferId, order)
 						f.gnode.senderManager.sendMessage(mesr)
 					}
 				}
 			}
 		}
 	}
-	mesr := &AntMes{
-		Origin:     f.gnode.name,
-		Target:     mes.Origin,
-		Function:   "sendBackBlock",
-		TransferId: mes.TransferId,
-		Eof:        true,
-	}
-	f.gnode.senderManager.sendMessage(mesr)
 	return nil
 }
 
@@ -466,16 +474,16 @@ func (f *FileManager) extractDataFromName(name string) (int, int, error) {
 }
 
 func (f *FileManager) receivedBackBlock(mes *AntMes) error {
-	transfer, ok := f.transferMap[mes.TransferId]
-	if !ok {
+	//logf.info("receivedBackBlock tf:%s  cl: %s order:%d\n", mes.TransferId, mes.FromClient, mes.Order)
+	if !f.transferMap.exists(mes.TransferId) {
+		logf.error("Received back bloc on a not started transfert id=%s", mes.TransferId)
 		return fmt.Errorf("Received back bloc on a not started transfert id=%s", mes.TransferId)
 	}
+	transfer := f.transferMap.get(mes.TransferId).(*FileTransfer)
 	transfer.lockAck.Lock()
 	defer transfer.lockAck.Unlock()
 	if _, ok := transfer.orderMap[int(mes.Order)]; !ok {
-		if !mes.Eof {
-			transfer.orderMap[int(mes.Order)] = 1
-		}
+		transfer.orderMap[int(mes.Order)] = 1
 		f.gnode.sendBackClient(transfer.clientId, mes)
 	}
 	return nil

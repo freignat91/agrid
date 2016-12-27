@@ -14,6 +14,8 @@ import (
 )
 
 //TODO: ramasse miette sur les objet transfer non terminé apres moult
+//TODO: function d'access direct au fichiers avec l'api
+//TODO: si duplicate >x utilisé alors recréer duplicate x
 
 var (
 	config GNodeConfig     = GNodeConfig{}
@@ -245,16 +247,13 @@ func (g *GNode) createAnswer(mes *AntMes) *AntMes {
 }
 
 func (g *GNode) sendBackClient(clientId string, mes *AntMes) {
-	//client, ok := g.clientMap[clientId]
+	//logf.info("sendBackClient tf=%s order=%d\n", mes.TransferId, mes.Order)
 	if !g.clientMap.exists(clientId) {
 		logf.error("Send to client error: client %s doesn't exist mes=%v", clientId, mes.Id)
 		return
 	}
-	client := g.clientMap.get(clientId).(gnodeClient)
+	client := g.clientMap.get(clientId).(*gnodeClient)
 	client.usage++
-	if err := client.stream.Send(mes); err != nil {
-		logf.error("Error trying to send message to client %s: mes=%s: %s\n", clientId, mes.toString(), err)
-	}
 	if client.usage%100 == 0 {
 		//Seams to have a bug in grpc cg
 		g.senderManager.sendMessage(&AntMes{
@@ -264,7 +263,10 @@ func (g *GNode) sendBackClient(clientId string, mes *AntMes) {
 		})
 		g.nodeFunctions.forceGC()
 	}
-
+	//logf.info("sendBackClient eff tf=%s order=%d\n", mes.TransferId, mes.Order)
+	if err := client.stream.Send(mes); err != nil {
+		logf.error("Error trying to send message to client %s: mes=%s: %s\n", clientId, mes.toString(), err)
+	}
 }
 
 func (g *GNode) startReorganizer() {
