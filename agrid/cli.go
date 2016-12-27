@@ -17,7 +17,7 @@ var (
 )
 
 func cli() {
-	RootCmd.PersistentFlags().StringVar(&agridCli.server, "server", "127.0.0.1:30103", "Server address")
+	RootCmd.PersistentFlags().StringVar(&agridCli.server, "server", "127.0.0.1:30103", "Server addresses format addr1:port, addr2:port, ...")
 	RootCmd.PersistentFlags().BoolVarP(&agridCli.verbose, "verbose", "v", false, `Verbose output`)
 	RootCmd.PersistentFlags().BoolVarP(&agridCli.silence, "silence", "s", false, `Silence output`)
 	RootCmd.PersistentFlags().BoolVar(&agridCli.debug, "debug", false, `Silence output`)

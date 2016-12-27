@@ -86,6 +86,11 @@ To authenticate a user a token a given at user creation by the cluster, this tok
 
 Agrid command lines implemented using the Agrid Go API
 
+### common options
+
+- --verbose: display more informations messages
+- --server: format addr1:port,addr2:port, ...   list of the cluster servers (can list less servers than really in the cluster)
+
 ### create a user
 `agrid user create [username] <--token>`
 

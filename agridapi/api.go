@@ -14,20 +14,34 @@ const (
 )
 
 type AgridAPI struct {
-	serverAddress string
-	logLevel      int
-	userName      string
-	userToken     string
+	serverList  []string
+	serverIndex int
+	logLevel    int
+	userName    string
+	userToken   string
 }
 
 // New create an Agrid api instance
-func New(serverAddress string) *AgridAPI {
+func New(servers string) *AgridAPI {
+	serverList := strings.Split(servers, ",")
+	for i, serv := range serverList {
+		serverList[i] = strings.Trim(serv, " ")
+	}
 	api := &AgridAPI{
-		serverAddress: serverAddress,
-		logLevel:      LOG_WARN,
+		serverList: serverList,
+		logLevel:   LOG_WARN,
 	}
 	api.userName = "common"
 	return api
+}
+
+func (api *AgridAPI) getNextServerAddr() string {
+	addr := api.serverList[api.serverIndex]
+	api.serverIndex++
+	if api.serverIndex >= len(api.serverList) {
+		api.serverIndex = 0
+	}
+	return addr
 }
 
 func (api *AgridAPI) getClient() (*gnodeClient, error) {

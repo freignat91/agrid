@@ -40,7 +40,7 @@ func (g *gnodeClient) init(api *AgridAPI) error {
 }
 
 func (g *gnodeClient) connectServer() error {
-	cn, err := grpc.Dial(g.api.serverAddress,
+	cn, err := grpc.Dial(g.api.getNextServerAddr(),
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 		grpc.WithTimeout(time.Second*20))
