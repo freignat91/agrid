@@ -20,20 +20,25 @@ func (api *AgridAPI) FileLs(folder string) ([]string, error) {
 	nbOk := 0
 	listMap := make(map[string]byte)
 	t0 := time.Now()
+	nbWaited := 0
+	nbReceived := 0
 	for {
 		mes, err := client.getNextAnswer(1000)
 		if err != nil {
 			return lineList, err
 		} else {
+			nbReceived++
+			//api.info("From node %s: order:%d w:%d r:%d\n", mes.Origin, mes.Order, nbWaited, nbReceived)
 			for _, line := range mes.Args {
 				listMap[line] = 1
 			}
 			if mes.Eof {
-				api.info("Node EOF %s: %v\n", mes.Origin, mes)
+				nbWaited += int(mes.Order)
 				nbOk++
-				if nbOk == client.nbNode {
-					break
-				}
+				//api.info("Node EOF %s: nbMes:%d  w:%d r:%d  wok=%d rok=%d\n", mes.Origin, mes.Order, nbWaited, nbReceived, client.nbNode, nbOk)
+			}
+			if nbOk == client.nbNode && nbWaited == nbReceived {
+				break
 			}
 		}
 		if time.Now().Sub(t0).Seconds() > 3 {

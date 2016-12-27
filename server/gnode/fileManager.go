@@ -130,26 +130,27 @@ func (f *FileManager) storeBlockAck(mes *AntMes) error {
 	transfer.orderMap[order] = byte(1)
 	if int64(len(transfer.orderMap)) >= transfer.toBeReceived {
 		transfer.terminated = true
-		f.sendBackStoreMessageToClient(transfer)
+		f.sendBackStoreMessageToClient(mes, transfer)
 		return nil
 	} else {
 		if mes.Order%100 == 0 {
 			t0 := time.Now()
 			if t0.Sub(transfer.lastClientMes).Seconds() > 1 {
 				transfer.lastClientMes = t0
-				f.sendBackStoreMessageToClient(transfer)
+				f.sendBackStoreMessageToClient(mes, transfer)
 			}
 		}
 	}
 	return nil
 }
 
-func (f *FileManager) sendBackStoreMessageToClient(transfer *FileTransfer) {
+func (f *FileManager) sendBackStoreMessageToClient(mes *AntMes, transfer *FileTransfer) {
 	if transfer.terminated {
 		logf.info("All store block ack received. File store tf=%s done\n", transfer.id)
 		f.gnode.sendBackClient(transfer.clientId, &AntMes{
 			Function:   "FileSendAck",
 			TransferId: transfer.id,
+			Origin:     mes.Origin,
 		})
 		f.transferMap.del(transfer.id)
 	} else {
@@ -157,6 +158,7 @@ func (f *FileManager) sendBackStoreMessageToClient(transfer *FileTransfer) {
 			Function:   "FileSendOngoing",
 			TransferId: transfer.id,
 			NoBlocking: true,
+			Origin:     mes.Origin,
 		})
 	}
 }
@@ -222,6 +224,12 @@ func (f *FileManager) formatOrder(order int64) string {
 	return fmt.Sprintf("%d", order)
 }
 
+func (f *FileManager) storeClientAck(mes *AntMes) error {
+	logf.info("received end of transfer ack from client, tf=%s\n", mes.TransferId)
+	f.transferMap.del(mes.TransferId)
+	return nil
+}
+
 //-----------------------------------------------------------------------------------------------------------------------------------
 // removetFile
 
@@ -256,12 +264,14 @@ func (f *FileManager) removeNodeFiles(mes *AntMes) error {
 		}
 		//logf.info("remove all dir\n")
 		if err := os.RemoveAll(fullName); err != nil {
-			return err
+			logf.warn("removeNodeFiles warn: %v\n", err)
+			//return err
 		}
 	} else {
 		//logf.info("remove all file\n")
 		if err := f.removeAgridFiles(fullName); err != nil {
-			return err
+			logf.warn("removeNodeFiles warn: %v\n", err)
+			//return err
 		}
 	}
 	f.gnode.senderManager.sendMessage(&AntMes{
@@ -301,7 +311,7 @@ func (f *FileManager) sendBackRemoveFilesToClient(mes *AntMes) error {
 // listFile
 
 func (f *FileManager) listFiles(mes *AntMes) error {
-	logf.info("Received listFile: %v\n", mes)
+	//logf.info("Received listFile: %v\n", mes)
 	if !f.gnode.checkUser(mes.UserName, mes.UserToken) {
 		return fmt.Errorf("Invalid user/token")
 	}
@@ -313,43 +323,45 @@ func (f *FileManager) listFiles(mes *AntMes) error {
 }
 
 func (f *FileManager) listNodeFiles(mes *AntMes) error {
-	logf.info("Received listNodeFile: %v\n", mes)
+	//logf.info("Received listNodeFile: %v\n", mes)
 	folder := mes.UserName
 	if len(mes.Args) >= 1 {
 		folder = path.Join(mes.UserName, mes.Args[0])
 	}
 	//logf.info("Receive listFiles on path %s\n", folder)
 	pathname := path.Join(config.rootDataPath, folder)
-	args := f.listFolder(mes, pathname, []string{})
-	f.sendListFilesBack(mes, args, true)
+	args, order := f.listFolder(mes, pathname, 0, []string{})
+	f.sendListFilesBack(mes, order+1, args, true)
 	return nil
 }
 
-func (f *FileManager) listFolder(mes *AntMes, pathname string, args []string) []string {
+func (f *FileManager) listFolder(mes *AntMes, pathname string, order int, args []string) ([]string, int) {
 	files, _ := ioutil.ReadDir(pathname)
 	for _, fl := range files {
 		name := path.Join(pathname, fl.Name())
 		if strings.HasSuffix(name, GNodeFileSuffixe) {
 			line := f.getTrueName(name)[len(f.gnode.dataPath):]
 			args = append(args, line)
-			if len(args) >= 100 {
-				f.sendListFilesBack(mes, args, false)
+			if len(args) >= 3 {
+				order++
+				f.sendListFilesBack(mes, order, args, false)
 				args = []string{}
 			}
 		} else {
-			args = f.listFolder(mes, name, args)
+			args, order = f.listFolder(mes, name, order, args)
 		}
 	}
-	return args
+	return args, order
 }
 
-func (f *FileManager) sendListFilesBack(mes *AntMes, args []string, eof bool) {
+func (f *FileManager) sendListFilesBack(mes *AntMes, order int, args []string, eof bool) {
 	//logf.info("sendListFilesBack: %v\n", mes)
 	f.gnode.senderManager.sendMessage(&AntMes{
 		Function:   "sendBackListFilesToClient",
 		Target:     mes.Origin,
 		Origin:     f.gnode.name,
 		FromClient: mes.FromClient,
+		Order:      int64(order),
 		Eof:        eof,
 		Args:       args,
 	})
@@ -425,11 +437,10 @@ func (f *FileManager) sendBlocks(mes *AntMes) error {
 			} else {
 				if order%nbThread == thread && (blockList == "" || strings.Index(blockList, fmt.Sprintf("#%d#", order)) >= 0) {
 					name := path.Join(fileName, fl.Name())
-					rfile, err := os.Open(name)
+					data, err := ioutil.ReadFile(name)
 					if err != nil {
-						logf.error("Error opening file %s\n", name)
+						logf.error("Error reading file %s\n", name)
 					} else {
-						defer rfile.Close()
 						mesr := &AntMes{
 							Origin:     f.gnode.name,
 							Target:     mes.Origin,
@@ -437,14 +448,8 @@ func (f *FileManager) sendBlocks(mes *AntMes) error {
 							TransferId: mes.TransferId,
 							Order:      int64(order),
 							NbBlock:    int64(nbBlock),
+							Data:       data,
 						}
-						mesr.Data = make([]byte, GNodeBlockSize*1024, GNodeBlockSize*1024)
-						nn, err := rfile.Read(mesr.Data)
-						if err != nil {
-							logf.error("Error reading file %s\n", name)
-						}
-						mesr.Data = mesr.Data[:nn]
-						//logf.info("sendBlock transferId=%s order=%d\n", mes.TransferId, order)
 						f.gnode.senderManager.sendMessage(mesr)
 					}
 				}

@@ -96,7 +96,7 @@ starttest:
 	@docker service create --network aNetwork --name agrid \
 	--publish 30103:30103 \
 	--mount type=bind,source=/home/freignat/data,target=/data \
-	--replicas=1 \
+	--replicas=3 \
 	$(IMAGETEST)
 
 stop:

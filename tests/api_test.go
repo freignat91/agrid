@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 )
 
 const (
@@ -84,6 +85,7 @@ func executeTest(t *testing.T, nbThread int, key string, fileName string) {
 		t.Fatalf("FileStore error: %v\n", err)
 	}
 	//retrieve file
+	time.Sleep(1000 * time.Millisecond)
 	if err := api.FileRetrieve("/test/ws.txt", "/tmp/test.txt", nbThread, key); err != nil {
 		t.Fatalf("FileRetrieve error: %v\n", err)
 	}

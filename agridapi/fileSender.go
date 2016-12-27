@@ -121,7 +121,7 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 		m.api.info("Send block order %d/%d\n", block.Order, totalBlock)
 		client.sendMessage(block, false)
 	}
-	nbOk := 0
+	okMap := make(map[string]byte)
 	m.api.info("Waiting for cluster ack\n")
 	for {
 		for _, client := range m.clients {
@@ -130,16 +130,25 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 				return err
 			}
 			if mes.Function == "FileSendAck" {
-				nbOk++
+				m.api.info("received ack: %s\n", mes.Origin)
+				okMap[mes.TransferId] = 1
 			} else {
 				m.api.info("File store ongoing\n")
 			}
 		}
-		if nbOk >= nbThread {
+		if len(okMap) >= nbThread {
 			break
 		}
 	}
-	m.api.info("Cluster thread ack received\n")
+	for i := 0; i < nbThread; i++ {
+		client := m.getNextClient()
+		client.sendMessage(&gnode.AntMes{
+			Function:   "storeClientAck",
+			Target:     "",
+			TransferId: transferIds[m.currentClient],
+		}, false)
+	}
+	m.api.info("Cluster ack received\n")
 	return nil
 }
 

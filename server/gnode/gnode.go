@@ -361,12 +361,13 @@ func (g *GNode) checkUser(user string, token string) bool {
 		return true
 	}
 	check, ok := g.userMap[user]
-	logf.info("Check [%s] token [%s]\n", check, token)
 	if !ok {
+		logf.info("Check user %s: false\n", user)
 		return false
 	}
 	if token == check {
 		return true
 	}
+	logf.info("Check user %s false\n", user)
 	return false
 }

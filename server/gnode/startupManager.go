@@ -31,6 +31,7 @@ type gnodeLeader struct {
 func (g *gnodeLeader) init(gnode *GNode) (bool, error) {
 	g.startupInit = true
 	g.gnode = gnode
+	//time.Sleep(time.Second * 60)
 	g.udpServer = &udpServer{}
 	if err := g.udpServer.start(g); err != nil {
 		return false, err

@@ -28,6 +28,7 @@ func (m *ReceiverManager) loadFunctions() {
 	m.functionMap["storeBlocAck"] = m.gnode.fileManager.storeBlockAck
 	m.functionMap["getFileBlocks"] = m.gnode.fileManager.sendBlocks
 	m.functionMap["sendBackBlock"] = m.gnode.fileManager.receivedBackBlock
+	m.functionMap["storeClientAck"] = m.gnode.fileManager.storeClientAck
 	m.functionMap["listFiles"] = m.gnode.fileManager.listFiles
 	m.functionMap["listNodeFiles"] = m.gnode.fileManager.listNodeFiles
 	m.functionMap["sendBackListFilesToClient"] = m.gnode.fileManager.sendBackListFilesToClient

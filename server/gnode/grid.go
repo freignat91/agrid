@@ -116,12 +116,6 @@ func (g *Grid) makeLinks() {
 func (g *Grid) computeLink() bool {
 	if g.nbNode == 1 {
 		return true
-	} else if g.nbNode == 2 {
-		array0 := g.nodes[0]
-		array0[0] = 1
-		array1 := g.nodes[1]
-		array1[0] = 0
-		return true
 	}
 	fmt.Printf("connect %d\n", g.nbLineConnect)
 	g.addLineConnects()
