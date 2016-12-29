@@ -6,7 +6,7 @@ Agrid v0.1.3 experimental
 
 Agrid is a high available file storage design to be easy to use and scale. Agrid can handle from 1 to several hundred storage nodes. Each file are cut and spread on nodes to be stored.
 
-Agrid is a docker service. It enough to pull its image `freignat91/agrid:latest` or build it using `make build` and create the docker service to use it on a swarm cluster. It can be scale using docker service scale command.
+Agrid is a docker service. It enough to pull its image `freignat91/agrid:latest` or build it using `make build` and create the docker service to use it on a swarm cluster. It can be scaled using docker service scale command.
 
 Agrid uses grpc protocol for communication between nodes and between nodes and clients. Under 20 nodes, all nodes are completely connected one to each other, up to 20 nodes Agrid create a grid and the communication between nodes are not direct anymore. 
 
@@ -37,7 +37,7 @@ Agrid use Ant like behavior to found the shortest path between two nodes. The pa
 - clone this project
 - execute `make install` to build the agrid command line executable
 - execute `make build` to create a image freignat91/agrid:latest
-- start the service: `make start` to create a service agrid using 3 nodes (change make start to execute directly the docker create service command to modify startup parameters)
+- start the service: `make start` to create a service agrid using 3 nodes (update Makafile or execute directly the "docker service create" command to change the number of nodes or orher parameters)
 
 for instance with 5 nodes, using a publish port 30103 and network aNetwork
 
@@ -74,17 +74,17 @@ To simulate nodes connections using different parameters as, node number, line c
 - <--line> optionally: the number of line connections 
 - <--cross> optionally: the number of cross connections 
 
-this command as not effect on the real cluster grid connections
+this command as not effect on the real cluster grid connections.see (./docs/Agrid-grid-building.pptx, ./docs/Agrid-Ant-net.pptx)
 
 ## Users
 
-Agrid use a "common" file space by default, everyone can access to this space, even if files can be encrypted. It's possible to create a user. A user create a dedicated file space no one can access except the user. A user can see and act only on its own file space.
+Agrid use a "common" file space by default, everyone can access to this space. Even if files can be encrypted with a specific key, it's possible to create a user. A user create a dedicated file space that no one can access except the user. A user can see and act only on its own file space.
 To authenticate a user a token a given at user creation by the cluster, this token should be provided for all commands used with a user.
 
 
 # CLI
 
-Agrid command lines implemented using the Agrid Go API
+Agrid command lines is implemented using the Agrid Go API
 
 ### common options
 
