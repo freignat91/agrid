@@ -256,11 +256,6 @@ func (g *GNode) sendBackClient(clientId string, mes *AntMes) {
 	client.usage++
 	if client.usage%100 == 0 {
 		//Seams to have a bug in grpc cg
-		g.senderManager.sendMessage(&AntMes{
-			Target:   "*",
-			Function: "forceGC",
-			Args:     []string{"false"},
-		})
 		g.nodeFunctions.forceGC()
 	}
 	//logf.info("sendBackClient eff tf=%s order=%d\n", mes.TransferId, mes.Order)
@@ -271,9 +266,15 @@ func (g *GNode) sendBackClient(clientId string, mes *AntMes) {
 
 func (g *GNode) startReorganizer() {
 	go func() {
+		nn := 0
 		for {
-			time.Sleep(30 * time.Second)
-			g.fileManager.moveRandomBlock()
+			time.Sleep(10 * time.Second)
+			g.nodeFunctions.forceGC()
+			nn++
+			if nn == 3 {
+				nn = 0
+				g.fileManager.moveRandomBlock()
+			}
 		}
 	}()
 }

@@ -21,6 +21,8 @@ type FileManager struct {
 	gnode          *GNode
 	transferMap    secureMap //map[string]*FileTransfer
 	transferNumber int
+	lockRead       sync.RWMutex
+	nbRead         int
 }
 
 type FileTransfer struct {
@@ -43,6 +45,7 @@ type FileTransfer struct {
 func (f *FileManager) init(gnode *GNode) {
 	f.gnode = gnode
 	f.transferMap.init()
+	f.lockRead = sync.RWMutex{}
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------------
@@ -429,6 +432,12 @@ func (f *FileManager) sendBlocks(mes *AntMes) error {
 	thread := int(mes.Thread)
 	blockList := mes.Args[0]
 	files, _ := ioutil.ReadDir(fileName)
+	/*
+		if f.nbRead > 100 {
+			f.gnode.nodeFunctions.forceGC()
+			f.nbRead = 0
+		}
+	*/
 	for _, fl := range files {
 		if fl.Name() != "meta" {
 			order, nbBlock, err := f.extractDataFromName(fl.Name())
@@ -437,7 +446,9 @@ func (f *FileManager) sendBlocks(mes *AntMes) error {
 			} else {
 				if order%nbThread == thread && (blockList == "" || strings.Index(blockList, fmt.Sprintf("#%d#", order)) >= 0) {
 					name := path.Join(fileName, fl.Name())
+					f.lockRead.Lock() //only for multiple local nodes install: TODO: to be removed
 					data, err := ioutil.ReadFile(name)
+					f.lockRead.Unlock()
 					if err != nil {
 						logf.error("Error reading file %s\n", name)
 					} else {

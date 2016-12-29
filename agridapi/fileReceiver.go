@@ -141,7 +141,7 @@ func (m *fileReceiver) retrieveFileThread(clusterFile string, thread int, nbThre
 				break
 			}
 			m.api.info("Thread %d received mes %d/%d (%d)\n", thread, len(orderThreadMap), nbBlock, mes.Order)
-			timer.Reset(time.Millisecond * 20000)
+			timer.Reset(time.Millisecond * 30000)
 		}
 		timer.Stop()
 		m.api.info("Thread %d completed\n", thread)
@@ -160,7 +160,11 @@ func (m *fileReceiver) nodeEndedOrTimeout(orderMap map[int]byte, client *gnodeCl
 			return true
 		}
 	}
-	m.api.info("Thread %d recalls blocks duplicate=%d: %s", thread, currentDuplicate, blockList)
+	if blockList == "" {
+		m.api.info("Thread %d recalls all blocks duplicate=%d", thread, currentDuplicate)
+	} else {
+		m.api.info("Thread %d recalls blocks duplicate=%d: %s", thread, currentDuplicate, blockList)
+	}
 	req.Duplicate = int32(currentDuplicate)
 	req.BlockList = blockList
 	if _, err := client.client.RetrieveFile(context.Background(), req); err != nil {
