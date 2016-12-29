@@ -21,6 +21,25 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+/*
+func TestFileCreate(t *testing.T) {
+	file, err := api.CreateFile("./ee.txt", "")
+	if err != nil {
+		t.Fatalf("CreateFile error: %v\n", err)
+	}
+	if _, err := file.WriteString("essai de text\n"); err != nil {
+		t.Fatalf("file.Write error: %v\n", err)
+	}
+	if _, err := file.WriteString("essai de text2\n"); err != nil {
+		t.Fatalf("file.Write error: %v\n", err)
+	}
+	file.Display()
+	if err := file.Close(); err != nil {
+		t.Fatalf("file.Close error: %v\n", err)
+	}
+}
+*/
+
 //user=common, one thread, not encrypted
 func TestFileCommonThread1(t *testing.T) {
 	executeTest(t, 1, "", "test1KB.file")
