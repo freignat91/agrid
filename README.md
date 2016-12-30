@@ -266,9 +266,20 @@ Write the string data in file at the current position
 
 Write the string data in file at the position 'at'
 
-### func (a *AFile) Seek(pos int64) (int64, error)
+### func (a *AFile) Read(data []byte) (int, error)
 
-Move the current possition to 'pos'
+Read data in file at the current position
+
+### func (a *AFile) ReadAt(data []byte, at int64) (int, error)
+
+Read data in file at the position 'at'
+
+### func (a *AFile) Seek(pos int64,  whence int) (int64, error)
+
+Move the current possition to 'pos', relative to whence:
+- 0: from the begining of the file
+- 1: from the current position
+- 2: from the end of the file
 
 ### func (a *AFile) Sync() error
 
