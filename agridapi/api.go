@@ -133,6 +133,8 @@ func (api *AgridAPI) SetUser(user string) {
 	if len(list) == 2 {
 		api.userName = list[0]
 		api.userToken = list[1]
+	} else {
+		api.userName = list[0]
 	}
 }
 
