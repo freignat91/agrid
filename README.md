@@ -247,6 +247,12 @@ List the node of the cluster
 ### func (api *AgridAPI) CreateFile(name string, key string) *AFile, error
 
 Create a new file on cluster and return an AFile instance
+if key != "", encrypte the data with the key (AES256)
+
+### func (api *AgridAPI) OpenFile(name string, key string) *AFile, error
+
+Open an existing file on cluster and return an AFile instance
+if key != "", encrypte the data with the key (AES256)
 
 ## Functions on AFile 
 

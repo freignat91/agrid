@@ -14,6 +14,7 @@ type AFile struct {
 	nbTotalBlock int
 	length       int64
 	isCreated    bool
+	cipher       *gCipher
 	blocks       map[int]*fBlock
 }
 
@@ -61,9 +62,9 @@ func (api *AgridAPI) OpenFile(name string, key string) (*AFile, error) {
 }
 
 func (af *AFile) init(api *AgridAPI, name string, key string) {
+	af.key = api.formatKey(key)
 	af.api = api
 	af.name = name
-	af.key = key
 	af.blocks = make(map[int]*fBlock)
 }
 
@@ -267,6 +268,14 @@ func (af *AFile) loadBlocks(orderMin int, orderMax int) error {
 	if list == "#" {
 		return nil
 	}
+	if af.key != "" {
+		af.api.info("Encrypted load\n")
+		af.cipher = &gCipher{}
+		af.api.info("Key=%s\n", af.key)
+		if err := af.cipher.init([]byte(af.key)); err != nil {
+			return fmt.Errorf("Cipher init error: %v", err)
+		}
+	}
 	af.api.info("load block order [%d,%d]\n", orderMin, orderMax)
 	_, err := af.client.sendMessage(&gnode.AntMes{
 		Function:     "fileLoadBlocks",
@@ -302,6 +311,13 @@ func (af *AFile) loadBlocks(orderMin int, orderMax int) error {
 			order := int(mes.Order)
 			block := af.getBlock(order)
 			block.data = make([]byte, gnode.GNodeBlockSize, gnode.GNodeBlockSize)
+			if af.cipher != nil {
+				dat, err := af.cipher.decrypt(mes.Data)
+				if err != nil {
+					return err
+				}
+				mes.Data = dat
+			}
 			for c := 0; c < len(mes.Data); c++ {
 				block.data[c] = mes.Data[c]
 			}
@@ -321,6 +337,13 @@ func (af *AFile) saveBlocks() error {
 	if len(af.blocks) == 0 {
 		return nil
 	}
+	if af.key != "" {
+		af.api.info("Encrypted write\n")
+		af.cipher = &gCipher{}
+		if err := af.cipher.init([]byte(af.key)); err != nil {
+			return fmt.Errorf("Cipher init error: %v", err)
+		}
+	}
 	nbSend := 0
 	for _, block := range af.blocks {
 		if !block.saved {
@@ -330,6 +353,13 @@ func (af *AFile) saveBlocks() error {
 				data := make([]byte, size, size)
 				for c := 0; c < size; c++ {
 					data[c] = block.data[block.min+c]
+				}
+				if af.cipher != nil {
+					dat, err := af.cipher.encrypt(data)
+					if err != nil {
+						return err
+					}
+					data = dat
 				}
 				af.api.info("save block order=%d\n", block.order)
 				_, err := af.client.sendMessage(&gnode.AntMes{
