@@ -15,7 +15,7 @@ import (
 )
 
 const GNodeFileSuffixe = ".!fg!"
-const GNodeBlockSize = 512
+const GNodeBlockSize = 512 * 1024
 
 type FileManager struct {
 	gnode          *GNode
@@ -184,8 +184,8 @@ func (f *FileManager) storeBlock(mes *AntMes) error {
 func (f *FileManager) writeBlock(mes *AntMes) error {
 	dir := fmt.Sprintf("%s.%d%s", path.Join(f.gnode.dataPath, mes.UserName, mes.TargetedPath), mes.Duplicate, GNodeFileSuffixe)
 	os.MkdirAll(dir, os.ModeDir)
-	name := fmt.Sprintf("b.%s.%d", f.formatOrder(mes.Order), mes.NbBlockTotal)
-	//logf.info("writeblock: %s / %s\n", dir, name)
+	name := f.getBlockName(mes.Order, mes.NbBlockTotal)
+	logf.info("writeblock: %s / %s\n", dir, name)
 	file, err := os.Create(path.Join(dir, name))
 	if err != nil {
 		return err
@@ -195,7 +195,6 @@ func (f *FileManager) writeBlock(mes *AntMes) error {
 	if errw != nil {
 		return errw
 	}
-	//return file.Sync()
 	if len(mes.Args) > 0 {
 		if _, err := os.Stat(path.Join(dir, "meta")); os.IsNotExist(err) {
 			filed, err := os.Create(path.Join(dir, "meta"))
@@ -212,6 +211,10 @@ func (f *FileManager) writeBlock(mes *AntMes) error {
 		}
 	}
 	return nil
+}
+
+func (f *FileManager) getBlockName(order int64, total int64) string {
+	return fmt.Sprintf("b.%s.%d", f.formatOrder(order), total)
 }
 
 func (f *FileManager) formatOrder(order int64) string {
@@ -307,6 +310,36 @@ func (f *FileManager) removeAgridFiles(fullname string) error {
 
 func (f *FileManager) sendBackRemoveFilesToClient(mes *AntMes) error {
 	f.gnode.sendBackClient(mes.FromClient, mes)
+	return nil
+}
+
+//-----------------------------------------------------------------------------------------------------------------------------------
+// getStat
+
+func (f *FileManager) getFileStat(mes *AntMes) error {
+	logf.info("Receiced getNodeFileStat: %v\n", mes)
+	fileName := fmt.Sprintf("%s.1%s", path.Join(f.gnode.dataPath, mes.UserName, mes.TargetedPath), GNodeFileSuffixe)
+	logf.info("fuleName: %s\n", fileName)
+	fileList, err := ioutil.ReadDir(fileName)
+	if err != nil {
+		return err
+	}
+	length := int64(0)
+	orderMax := 0
+	for _, file := range fileList {
+		if file.Name() != "meta" {
+			order, _, err := f.extractDataFromName(file.Name())
+			if err == nil {
+				if order > orderMax {
+					orderMax = order
+					length = file.Size()
+				}
+			}
+		}
+	}
+	ans := f.gnode.createAnswer(mes)
+	ans.Size = int64(orderMax-1)*int64(GNodeBlockSize) + length
+	f.gnode.senderManager.sendMessage(ans)
 	return nil
 }
 
@@ -432,12 +465,6 @@ func (f *FileManager) sendBlocks(mes *AntMes) error {
 	thread := int(mes.Thread)
 	blockList := mes.Args[0]
 	files, _ := ioutil.ReadDir(fileName)
-	/*
-		if f.nbRead > 100 {
-			f.gnode.nodeFunctions.forceGC()
-			f.nbRead = 0
-		}
-	*/
 	for _, fl := range files {
 		if fl.Name() != "meta" {
 			order, nbBlock, err := f.extractDataFromName(fl.Name())
@@ -507,4 +534,128 @@ func (f *FileManager) receivedBackBlock(mes *AntMes) error {
 
 func (f *FileManager) moveRandomBlock() {
 	//TODO
+}
+
+//----------------------------------------------------------------------------------------------
+// direct file save block
+
+func (f *FileManager) fileSaveBlock(mes *AntMes) error {
+	if !f.gnode.checkUser(mes.UserName, mes.UserToken) {
+		return fmt.Errorf("Invalid user/token")
+	}
+	//logf.info("Received fileSaveBlock client=%s file=%s order=%d\n", mes.FromClient, mes.TargetedPath, mes.Order)
+	pos := int(rand.Int31n(int32(len(f.gnode.nodeNameList))))
+	if pos == f.gnode.nodeIndex && len(f.gnode.nodeNameList) > 3 {
+		pos = pos + int(rand.Int31n(int32(len(f.gnode.nodeNameList)-1)))
+		if pos >= len(f.gnode.nodeNameList) {
+			pos = pos - len(f.gnode.nodeNameList)
+		}
+	}
+	for nn := 0; nn < config.nbDuplicate; nn++ {
+		block := &AntMes{
+			Target:       f.gnode.nodeNameList[pos],
+			Function:     "fileNodeSaveBlock",
+			Order:        mes.Order,
+			TargetedPath: mes.TargetedPath,
+			NbBlockTotal: mes.NbBlockTotal,
+			Duplicate:    int32(nn + 1),
+			FromClient:   mes.FromClient,
+			UserName:     mes.UserName,
+			UserToken:    mes.UserToken,
+			Data:         mes.Data,
+		}
+		f.gnode.senderManager.sendMessage(block)
+		pos++
+		if pos >= len(f.gnode.nodeNameList) {
+			pos = 0
+		}
+		if pos == f.gnode.nodeIndex && len(f.gnode.nodeNameList) > 3 {
+			pos++
+			if pos >= len(f.gnode.nodeNameList) {
+				pos = 0
+			}
+		}
+	}
+	return nil
+}
+
+func (f *FileManager) fileNodeSaveBlock(mes *AntMes) error {
+	//logf.info("Received fileNodeSaveBlock file=%s order=%d\n", mes.TargetedPath, mes.Order)
+	for duplicate := 1; duplicate <= config.nbDuplicate; duplicate++ {
+		fileName := fmt.Sprintf("%s.%d%s", path.Join(f.gnode.dataPath, mes.UserName, mes.TargetedPath), mes.Duplicate, GNodeFileSuffixe)
+		fmt.Printf("fileName: %s\n", fileName)
+		files, _ := ioutil.ReadDir(fileName)
+		for _, fl := range files {
+			if fl.Name() != "meta" {
+				order, nbBlock, err := f.extractDataFromName(fl.Name())
+				fmt.Printf("find file %s: %d-%d\n", fl.Name(), order, nbBlock)
+				if err == nil {
+					if nbBlock < int(mes.NbBlockTotal) {
+						fmt.Printf("rename %s -> %s\n", fl.Name(), f.getBlockName(int64(order), int64(mes.NbBlockTotal)))
+						os.Rename(path.Join(fileName, fl.Name()), path.Join(fileName, f.getBlockName(int64(order), int64(mes.NbBlockTotal))))
+					}
+				}
+			}
+		}
+	}
+	if err := f.writeBlock(mes); err != nil {
+		return err
+	}
+	f.gnode.senderManager.sendMessage(&AntMes{
+		Target:       mes.Origin,
+		Function:     "fileSaveBlockReturnClient",
+		FromClient:   mes.FromClient,
+		TargetedPath: mes.TargetedPath,
+		Order:        mes.Order,
+	})
+	return nil
+}
+
+func (f *FileManager) fileSaveBlockReturnClient(mes *AntMes) error {
+	//logf.info("Received fileSaveBlockReturnClient client=%s file=%s order=%d\n", mes.FromClient, mes.TargetedPath, mes.Order)
+	f.gnode.sendBackClient(mes.FromClient, mes)
+	return nil
+}
+
+//----------------------------------------------------------------------------------------------
+// direct file save block
+
+func (f *FileManager) fileLoadBlocks(mes *AntMes) error {
+	//logf.info("Received fileLoadBlocks: %v\n", mes)
+	if len(mes.Args) == 0 {
+		return nil
+	}
+	fileName := fmt.Sprintf("%s.%d%s", path.Join(f.gnode.dataPath, mes.UserName, mes.TargetedPath), mes.Duplicate, GNodeFileSuffixe)
+	blockList := mes.Args[0]
+	files, _ := ioutil.ReadDir(fileName)
+	nbSent := 0
+	for _, fl := range files {
+		if fl.Name() != "meta" {
+			order, _, err := f.extractDataFromName(fl.Name())
+			if err == nil {
+				if strings.Index(blockList, fmt.Sprintf("#%d#", order)) >= 0 {
+					name := path.Join(fileName, fl.Name())
+					f.lockRead.Lock() //only for multiple local nodes install: TODO: to be removed
+					data, err := ioutil.ReadFile(name)
+					f.lockRead.Unlock()
+					if err != nil {
+						logf.error("Error reading file %s\n", name)
+					} else {
+						ans := f.gnode.createAnswer(mes)
+						ans.Order = int64(order)
+						ans.Data = data
+						f.gnode.senderManager.sendMessage(ans)
+						nbSent++
+					}
+				}
+			}
+		}
+	}
+	ans := f.gnode.createAnswer(mes)
+	ans.Order = 0
+	ans.Eof = true
+	ans.NbBlock = int64(nbSent)
+	//logf.info("send back answer: %v\n", ans)
+	f.gnode.senderManager.sendMessage(ans)
+	return nil
 }

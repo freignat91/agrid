@@ -31,16 +31,12 @@ func (s *MessageSender) start() {
 // route message
 func (s *MessageSender) sendMessage(mes *AntMes) error {
 	//logf.info("sendMessageEff: %s\n", mes.toString())
-	if mes.Id == "" {
-		mes.Id = s.gnode.getNewId(true)
-		mes.Origin = s.gnode.name
+	if !s.gnode.connectReady {
+		logf.error("Connections not ready abort send\n")
+		return nil
 	}
 	if mes.Target == s.gnode.name {
 		s.gnode.receiverManager.receiveMessage(mes)
-		return nil
-	}
-	if !s.gnode.connectReady {
-		logf.error("Connections not ready abort send\n")
 		return nil
 	}
 	if mes.IsAnswer {

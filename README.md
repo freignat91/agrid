@@ -1,6 +1,6 @@
 # AGRID
 
-Agrid v0.1.3 experimental
+Agrid v0.1.4 experimental
 
 # Purpose
 
@@ -55,7 +55,7 @@ For resilience reason, it's better to have a separated disk file system for each
 
 ## Node crash
 
-If a node crash (agrid itself, or disk file system failure or VM failure), docker will restart the node. When the new node restart, it will try to get it's previous file system or ask the other nodes to resend the blocks he handles (this last part is targeted for 0.1.4 version)
+If a node crash (agrid itself, or disk file system failure or VM failure), docker will restart the node. When the new node restart, it will try to get it's previous file system or ask the other nodes to resend the blocks he handles (this last part is targeted for 0.1.5 version)
 
 ## Scale out
 
@@ -244,7 +244,60 @@ Arguments:
 
 List the node of the cluster
 
-### tests
+### func (api *AgridAPI) CreateFile(name string, key string) *AFile, error
+
+Create a new file on cluster and return an AFile instance
+if key != "", encrypte the data with the key (AES256)
+
+### func (api *AgridAPI) OpenFile(name string, key string) *AFile, error
+
+Open an existing file on cluster and return an AFile instance
+if key != "", encrypte the data with the key (AES256)
+
+## Functions on AFile 
+
+### func (a *AFile) Write(data []byte) (int, error)
+
+Write data in file at the current position
+
+### func (a *AFile) WriteAt(data []byte, at int64) (int, error)
+
+Write data in file at the position 'at'
+
+### func (a *AFile) WriteString(data []byte) (int, error)
+
+Write the string data in file at the current position
+
+### func (a *AFile) WriteStringAt(data []byte, at int64) (int, error)
+
+Write the string data in file at the position 'at'
+
+### func (a *AFile) Read(data []byte) (int, error)
+
+Read data in file at the current position
+
+### func (a *AFile) ReadAt(data []byte, at int64) (int, error)
+
+Read data in file at the position 'at'
+
+### func (a *AFile) Seek(pos int64,  whence int) (int64, error)
+
+Move the current possition to 'pos', relative to whence:
+- 0: from the begining of the file
+- 1: from the current position
+- 2: from the end of the file
+
+### func (a *AFile) Sync() error
+
+Save the memory data on the cluster
+
+### func (a *AFile) Close() error
+
+Save the memory data on the cluster and free all AFile instance ressources
+
+Create a new file on cluster
+
+# tests
 
 execute: make test
 

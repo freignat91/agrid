@@ -46,6 +46,12 @@ func (m *SenderManager) start(gnode *GNode, bufferSize int, maxGoRoutine int) {
 
 func (m *SenderManager) sendMessage(mes *AntMes) bool {
 	m.usage++
+	if mes.Id == "" {
+		mes.Id = m.gnode.getNewId(true)
+		if mes.Origin == "" {
+			mes.Origin = m.gnode.name
+		}
+	}
 	//logf.info("send message: %s\n", mes.toString())
 	if m.nbSender <= 0 {
 		m.sender.sendMessage(mes)

@@ -38,7 +38,7 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 	md5 := md5.New()
 	io.WriteString(md5, fileName)
 	tId := fmt.Sprintf("TF-%x-%d", md5.Sum(nil), time.Now().UnixNano())
-	blockSize := int64(gnode.GNodeBlockSize) * 1024
+	blockSize := int64(gnode.GNodeBlockSize)
 	totalBlock := length / blockSize
 	if length%blockSize > 0 {
 		totalBlock++
@@ -78,7 +78,7 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 			ClientId:     client.id,
 			TransferId:   transferId,
 			Metadata:     meta,
-			BlockSize:    int64(blockSize * 1024),
+			BlockSize:    int64(blockSize),
 			Key:          key,
 			UserName:     m.api.userName,
 			UserToken:    m.api.userToken,
