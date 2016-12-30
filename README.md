@@ -253,7 +253,7 @@ if key != "", encrypte the data with the key (AES256)
 
 ### func (api *AgridAPI) OpenFile(name string, key string) *AFile, error
 
-Open an existing file on cluster and return an AFile instance
+Open an existing file on cluster, move the current position to the end of file and return an AFile instance
 if key != "", encrypte the data with the key (AES256)
 
 ## Functions on AFile 
@@ -296,8 +296,6 @@ Save the memory data on the cluster
 ### func (a *AFile) Close() error
 
 Save the memory data on the cluster and free all AFile instance ressources
-
-Create a new file on cluster
 
 # tests
 
