@@ -129,12 +129,14 @@ func (api *AgridAPI) formatKey(key string) string {
 func (api *AgridAPI) SetUser(user string) {
 	api.userName = "common"
 	api.userToken = ""
-	list := strings.Split(user, ":")
-	if len(list) == 2 {
-		api.userName = list[0]
-		api.userToken = list[1]
-	} else {
-		api.userName = list[0]
+	if user != "" {
+		list := strings.Split(user, ":")
+		if len(list) == 2 {
+			api.userName = list[0]
+			api.userToken = list[1]
+		} else {
+			api.userName = list[0]
+		}
 	}
 }
 
