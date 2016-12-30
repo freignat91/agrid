@@ -17,28 +17,49 @@ var api *agridapi.AgridAPI
 
 func TestMain(m *testing.M) {
 	api = agridapi.New(server)
-	api.SetLogLevel("info")
+	//api.SetLogLevel("info")
 	os.Exit(m.Run())
 }
 
-/*
 func TestFileCreate(t *testing.T) {
-	file, err := api.CreateFile("./ee.txt", "")
+	file, err := api.CreateFile("/test/ee.txt", "test")
 	if err != nil {
 		t.Fatalf("CreateFile error: %v\n", err)
 	}
-	if _, err := file.WriteString("essai de text\n"); err != nil {
+	if _, err := file.WriteString("essai de text1\n"); err != nil {
 		t.Fatalf("file.Write error: %v\n", err)
 	}
 	if _, err := file.WriteString("essai de text2\n"); err != nil {
 		t.Fatalf("file.Write error: %v\n", err)
 	}
-	file.Display()
+	if _, err := file.WriteString("essai de text3\n"); err != nil {
+		t.Fatalf("file.Write error: %v\n", err)
+	}
+	if _, err := file.Seek(9, 0); err != nil {
+		t.Fatalf("file.Write error: %v\n", err)
+	}
+	if _, err := file.WriteString("xxxxx"); err != nil {
+		t.Fatalf("file.Write error: %v\n", err)
+	}
+	if err := file.Sync(); err != nil {
+		t.Fatalf("file.Sync error: %v\n", err)
+	}
+	//file.Display()
 	if err := file.Close(); err != nil {
 		t.Fatalf("file.Close error: %v\n", err)
 	}
+	file2, err := api.OpenFile("/test/ee.txt", "test")
+	if err != nil {
+		t.Fatalf("OpenFile error: %v\n", err)
+	}
+	if _, err := file2.WriteString("essai de text5\n"); err != nil {
+		t.Fatalf("file.Write error: %v\n", err)
+	}
+	file.Display()
+	if err := file2.Close(); err != nil {
+		t.Fatalf("file.Close error: %v\n", err)
+	}
 }
-*/
 
 //user=common, one thread, not encrypted
 func TestFileCommonThread1(t *testing.T) {
