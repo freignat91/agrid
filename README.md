@@ -1,6 +1,6 @@
 # AGRID
 
-Agrid v0.1.3 experimental
+Agrid v0.1.4 experimental
 
 # Purpose
 
@@ -55,7 +55,7 @@ For resilience reason, it's better to have a separated disk file system for each
 
 ## Node crash
 
-If a node crash (agrid itself, or disk file system failure or VM failure), docker will restart the node. When the new node restart, it will try to get it's previous file system or ask the other nodes to resend the blocks he handles (this last part is targeted for 0.1.4 version)
+If a node crash (agrid itself, or disk file system failure or VM failure), docker will restart the node. When the new node restart, it will try to get it's previous file system or ask the other nodes to resend the blocks he handles (this last part is targeted for 0.1.5 version)
 
 ## Scale out
 
