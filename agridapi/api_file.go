@@ -6,6 +6,12 @@ import (
 	"time"
 )
 
+type AFileStat struct {
+	Name   string
+	User   string
+	Length int64
+}
+
 // FileLs return list of file stored under <folder>
 func (api *AgridAPI) FileLs(folder string) ([]string, error) {
 	lineList := []string{}
@@ -106,4 +112,43 @@ func (api *AgridAPI) FileRm(clusterPathname string, recursive bool) error {
 		}
 	}
 	return nil
+}
+
+// FileStat return stat of file name
+func (api *AgridAPI) FileStat(name string) (*AFileStat, error) {
+	client, err := api.getClient()
+	if err != nil {
+		return nil, err
+	}
+	defer client.close()
+	mes := client.createMessage("*", false, "getFileStat", name)
+	mes.TargetedPath = name
+	if _, err := client.sendMessage(mes, false); err != nil {
+		return nil, err
+	}
+	t0 := time.Now()
+	nbOk := 0
+	stat := AFileStat{Name: name, User: api.userName}
+	for {
+		mes, err := client.getNextAnswer(1000)
+		if err != nil {
+			return nil, err
+		} else {
+			api.info("Receive answer: %v\n", mes.Origin)
+			if len(mes.Args) > 0 {
+				return nil, fmt.Errorf("%s", mes.Args[0])
+			}
+			if mes.Size > stat.Length {
+				stat.Length = mes.Size
+			}
+			nbOk++
+			if nbOk == client.nbNode {
+				break
+			}
+		}
+		if time.Now().Sub(t0) > time.Second*3 {
+			return nil, fmt.Errorf("getStat file %s timeout", name)
+		}
+	}
+	return &stat, nil
 }

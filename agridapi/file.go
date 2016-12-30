@@ -12,6 +12,8 @@ type AFile struct {
 	key          string
 	fileSeek     int64
 	nbTotalBlock int
+	length       int64
+	isCreated    bool
 	blocks       map[int]*fBlock
 }
 
@@ -24,6 +26,9 @@ type fBlock struct {
 }
 
 func (api *AgridAPI) CreateFile(name string, key string) (*AFile, error) {
+	if err := api.FileRm(name, false); err != nil {
+		return nil, err
+	}
 	af := AFile{}
 	af.init(api, name, key)
 	cli, err := api.getClient()
@@ -31,17 +36,27 @@ func (api *AgridAPI) CreateFile(name string, key string) (*AFile, error) {
 		return nil, err
 	}
 	af.client = cli
+	af.isCreated = true
+	api.info("Create file %s\n", af.name)
 	return &af, nil
 }
 
 func (api *AgridAPI) OpenFile(name string, key string) (*AFile, error) {
 	af := AFile{}
 	af.init(api, name, key)
+	if stat, err := api.FileStat(name); err != nil {
+		return nil, err
+	} else {
+		af.fileSeek = stat.Length
+		af.length = stat.Length
+		af.nbTotalBlock = int(af.length/int64(gnode.GNodeBlockSize)) + 1
+	}
 	cli, err := api.getClient()
 	if err != nil {
 		return nil, err
 	}
 	af.client = cli
+	api.info("Open file %s length=%d\n", af.name, af.length)
 	return &af, nil
 }
 
@@ -67,7 +82,9 @@ func (af *AFile) WriteString(data string) (int, error) {
 func (af *AFile) Write(data []byte) (int, error) {
 	orderMin, min, orderMax, max := af.getBoundaries(len(data))
 	af.api.info("write seek=%d lenData=%d orderMin=%d:%d orderMax=%d:%d\n", af.fileSeek, len(data), orderMin, min, orderMax, max)
-	//af.loadBlocks(orderMin, orderMax)
+	if err := af.loadBlocks(orderMin, orderMax); err != nil {
+		return 0, err
+	}
 	if orderMin == orderMax {
 		block := af.getBlock(orderMin)
 		if block.min > min {
@@ -82,9 +99,6 @@ func (af *AFile) Write(data []byte) (int, error) {
 			cd++
 		}
 		block.saved = false
-		if af.nbTotalBlock < orderMax {
-			af.nbTotalBlock = orderMax
-		}
 	} else {
 		dataIndex := 0
 		for b := orderMin; b <= orderMax; b++ {
@@ -117,6 +131,12 @@ func (af *AFile) Write(data []byte) (int, error) {
 		}
 	}
 	af.fileSeek += int64(len(data))
+	if af.nbTotalBlock < orderMax {
+		af.nbTotalBlock = orderMax
+	}
+	if af.length < af.fileSeek {
+		af.length = af.fileSeek
+	}
 	return len(data), nil
 }
 
@@ -125,7 +145,7 @@ func (af *AFile) WriteStringAt(data string, at int64) (int, error) {
 }
 
 func (af *AFile) WriteAt(data []byte, at int64) (int, error) {
-	if _, err := af.Seek(at); err != nil {
+	if _, err := af.Seek(at, 0); err != nil {
 		return 0, err
 	}
 	return af.Write(data)
@@ -134,7 +154,9 @@ func (af *AFile) WriteAt(data []byte, at int64) (int, error) {
 func (af *AFile) Read(data []byte) (int, error) {
 	orderMin, min, orderMax, max := af.getBoundaries(len(data))
 	af.api.info("read seek=%d lenData=%d orderMin=%d:%d orderMax=%d:%d\n", af.fileSeek, len(data), orderMin, min, orderMax, max)
-	af.loadBlocks(orderMin, orderMax)
+	if err := af.loadBlocks(orderMin, orderMax); err != nil {
+		return 0, err
+	}
 	if orderMin == orderMax {
 		block := af.getBlock(orderMin)
 		if block.min > min {
@@ -184,7 +206,7 @@ func (af *AFile) Read(data []byte) (int, error) {
 }
 
 func (af *AFile) ReadAt(data []byte, at int64) (int, error) {
-	if _, err := af.Seek(at); err != nil {
+	if _, err := af.Seek(at, 0); err != nil {
 		return 0, err
 	}
 	return af.Read(data)
@@ -194,8 +216,15 @@ func (af *AFile) ReadString() (string, error) {
 	return "", nil
 }
 
-func (af *AFile) Seek(offset int64) (int64, error) {
-	af.fileSeek = offset
+func (af *AFile) Seek(offset int64, whence int) (int64, error) {
+	if whence == 0 {
+		af.fileSeek = offset
+		return af.fileSeek, nil
+	} else if whence == 1 {
+		af.fileSeek += offset
+		return af.fileSeek, nil
+	}
+	af.fileSeek = af.length + offset
 	return af.fileSeek, nil
 }
 
@@ -219,52 +248,70 @@ func (af *AFile) getBlock(order int) *fBlock {
 		block.data = make([]byte, gnode.GNodeBlockSize, gnode.GNodeBlockSize)
 		block.order = order
 		block.min = gnode.GNodeBlockSize
+		block.saved = af.isCreated
 		af.blocks[order] = block
 	}
 	return block
 }
 
 func (af *AFile) loadBlocks(orderMin int, orderMax int) error {
-	args := []string{}
+	list := "#"
+	nbBlock := 0
 	for c := orderMin; c <= orderMax; c++ {
 		block, ok := af.blocks[c]
 		if !ok || !block.saved {
-			args = append(args, fmt.Sprintf("%d", c))
+			list = fmt.Sprintf("%s%d#", list, c)
+			nbBlock++
 		}
 	}
-	if len(args) == 0 {
+	if list == "#" {
 		return nil
 	}
 	af.api.info("load block order [%d,%d]\n", orderMin, orderMax)
 	_, err := af.client.sendMessage(&gnode.AntMes{
 		Function:     "fileLoadBlocks",
 		TargetedPath: af.name,
-		Target:       "",
+		Target:       "*",
+		Duplicate:    1,
 		UserName:     af.api.userName,
 		UserToken:    af.api.userToken,
-		Args:         args,
+		Args:         []string{list},
 	}, false)
 	if err != nil {
 		return nil
 	}
-	nb := orderMax - orderMin + 1
 	orderMap := make(map[int]byte)
+	nbReceived := 0
+	nbOrigin := 0
 	for {
 		mes, err := af.client.getNextAnswer(3000)
 		if err != nil {
 			return err
 		}
-		order := int(mes.Order)
-		if order > 0 {
+		af.api.info("received origin=%s order=%d orderMap=%d\n", mes.Origin, mes.Order, len(orderMap))
+		if mes.Eof {
+			nbOrigin++
+			nbReceived += int(mes.NbBlock)
+			if nbOrigin == af.client.nbNode {
+				if nbReceived == 0 {
+					af.api.info("No block found\n")
+					return nil
+				}
+			}
+		} else {
+			order := int(mes.Order)
 			block := af.getBlock(order)
-			block.data = mes.Data
+			block.data = make([]byte, gnode.GNodeBlockSize, gnode.GNodeBlockSize)
+			for c := 0; c < len(mes.Data); c++ {
+				block.data[c] = mes.Data[c]
+			}
 			block.saved = true
 			block.min = 0
 			block.max = len(mes.Data)
-		}
-		orderMap[order] = 1
-		if len(orderMap) == nb {
-			break
+			orderMap[order] = 1
+			if len(orderMap) == nbBlock {
+				break
+			}
 		}
 	}
 	return nil

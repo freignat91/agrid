@@ -35,10 +35,12 @@ func (m *ReceiverManager) loadFunctions() {
 	m.functionMap["removeFiles"] = m.gnode.fileManager.removeFiles
 	m.functionMap["removeNodeFiles"] = m.gnode.fileManager.removeNodeFiles
 	m.functionMap["sendBackRemoveFilesToClient"] = m.gnode.fileManager.sendBackRemoveFilesToClient
+	m.functionMap["getFileStat"] = m.gnode.fileManager.getFileStat
 	//direct file functions
 	m.functionMap["fileSaveBlock"] = m.gnode.fileManager.fileSaveBlock
 	m.functionMap["fileNodeSaveBlock"] = m.gnode.fileManager.fileNodeSaveBlock
 	m.functionMap["fileSaveBlockReturnClient"] = m.gnode.fileManager.fileSaveBlockReturnClient
+	m.functionMap["fileLoadBlocks"] = m.gnode.fileManager.fileLoadBlocks
 	//node Functions
 	m.functionMap["ping"] = m.gnode.nodeFunctions.ping
 	m.functionMap["pingFromTo"] = m.gnode.nodeFunctions.pingFromTo
@@ -160,22 +162,12 @@ func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamS
 		if err == io.EOF {
 			logf.error("Client reader %s: EOF\n", clientName)
 			m.gnode.clientMap.del(clientName)
-			m.gnode.senderManager.sendMessage(&AntMes{
-				Target:   "*",
-				Function: "forceGC",
-				Args:     []string{"true"},
-			})
 			m.gnode.nodeFunctions.forceGC()
 			return
 		}
 		if err != nil {
 			logf.error("Client reader %s: Failed to receive message: %v\n", clientName, err)
 			m.gnode.clientMap.del(clientName)
-			m.gnode.senderManager.sendMessage(&AntMes{
-				Target:   "*",
-				Function: "forceGC",
-				Args:     []string{"true"},
-			})
 			m.gnode.nodeFunctions.forceGC()
 			return
 		}

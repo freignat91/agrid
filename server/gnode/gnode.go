@@ -244,7 +244,6 @@ func (g *GNode) createAnswer(mes *AntMes) *AntMes {
 		Debug:        mes.Debug,
 		IsPathWriter: mes.IsPathWriter,
 		AnswerWait:   mes.AnswerWait,
-		Eof:          true,
 	}
 }
 

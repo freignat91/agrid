@@ -17,7 +17,7 @@ func (r *MessageReceiver) start() {
 		for {
 			mes := <-r.receiverManager.ioChan
 			if mes != nil {
-				//logf.info("Receive message eff %v\n", mes.toString())
+				logf.info("Receive message eff %v\n", mes.toString())
 				r.usage++
 				reached, stop := r.targetReached(mes)
 				if reached {

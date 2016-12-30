@@ -314,6 +314,36 @@ func (f *FileManager) sendBackRemoveFilesToClient(mes *AntMes) error {
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------------
+// getStat
+
+func (f *FileManager) getFileStat(mes *AntMes) error {
+	logf.info("Receiced getNodeFileStat: %v\n", mes)
+	fileName := fmt.Sprintf("%s.1%s", path.Join(f.gnode.dataPath, mes.UserName, mes.TargetedPath), GNodeFileSuffixe)
+	logf.info("fuleName: %s\n", fileName)
+	fileList, err := ioutil.ReadDir(fileName)
+	if err != nil {
+		return err
+	}
+	length := int64(0)
+	orderMax := 0
+	for _, file := range fileList {
+		if file.Name() != "meta" {
+			order, _, err := f.extractDataFromName(file.Name())
+			if err == nil {
+				if order > orderMax {
+					orderMax = order
+					length = file.Size()
+				}
+			}
+		}
+	}
+	ans := f.gnode.createAnswer(mes)
+	ans.Size = int64(orderMax-1)*int64(GNodeBlockSize) + length
+	f.gnode.senderManager.sendMessage(ans)
+	return nil
+}
+
+//-----------------------------------------------------------------------------------------------------------------------------------
 // listFile
 
 func (f *FileManager) listFiles(mes *AntMes) error {
@@ -513,7 +543,7 @@ func (f *FileManager) fileSaveBlock(mes *AntMes) error {
 	if !f.gnode.checkUser(mes.UserName, mes.UserToken) {
 		return fmt.Errorf("Invalid user/token")
 	}
-	logf.info("Received fileSaveBlock client=%s file=%s order=%d\n", mes.FromClient, mes.TargetedPath, mes.Order)
+	//logf.info("Received fileSaveBlock client=%s file=%s order=%d\n", mes.FromClient, mes.TargetedPath, mes.Order)
 	pos := int(rand.Int31n(int32(len(f.gnode.nodeNameList))))
 	if pos == f.gnode.nodeIndex && len(f.gnode.nodeNameList) > 3 {
 		pos = pos + int(rand.Int31n(int32(len(f.gnode.nodeNameList)-1)))
@@ -550,7 +580,7 @@ func (f *FileManager) fileSaveBlock(mes *AntMes) error {
 }
 
 func (f *FileManager) fileNodeSaveBlock(mes *AntMes) error {
-	logf.info("Received fileNodeSaveBlock file=%s order=%d\n", mes.TargetedPath, mes.Order)
+	//logf.info("Received fileNodeSaveBlock file=%s order=%d\n", mes.TargetedPath, mes.Order)
 	for duplicate := 1; duplicate <= config.nbDuplicate; duplicate++ {
 		fileName := fmt.Sprintf("%s.%d%s", path.Join(f.gnode.dataPath, mes.UserName, mes.TargetedPath), mes.Duplicate, GNodeFileSuffixe)
 		fmt.Printf("fileName: %s\n", fileName)
@@ -582,7 +612,50 @@ func (f *FileManager) fileNodeSaveBlock(mes *AntMes) error {
 }
 
 func (f *FileManager) fileSaveBlockReturnClient(mes *AntMes) error {
-	logf.info("Received fileSaveBlockReturnClient client=%s file=%s order=%d\n", mes.FromClient, mes.TargetedPath, mes.Order)
+	//logf.info("Received fileSaveBlockReturnClient client=%s file=%s order=%d\n", mes.FromClient, mes.TargetedPath, mes.Order)
 	f.gnode.sendBackClient(mes.FromClient, mes)
+	return nil
+}
+
+//----------------------------------------------------------------------------------------------
+// direct file save block
+
+func (f *FileManager) fileLoadBlocks(mes *AntMes) error {
+	//logf.info("Received fileLoadBlocks: %v\n", mes)
+	if len(mes.Args) == 0 {
+		return nil
+	}
+	fileName := fmt.Sprintf("%s.%d%s", path.Join(f.gnode.dataPath, mes.UserName, mes.TargetedPath), mes.Duplicate, GNodeFileSuffixe)
+	blockList := mes.Args[0]
+	files, _ := ioutil.ReadDir(fileName)
+	nbSent := 0
+	for _, fl := range files {
+		if fl.Name() != "meta" {
+			order, _, err := f.extractDataFromName(fl.Name())
+			if err == nil {
+				if strings.Index(blockList, fmt.Sprintf("#%d#", order)) >= 0 {
+					name := path.Join(fileName, fl.Name())
+					f.lockRead.Lock() //only for multiple local nodes install: TODO: to be removed
+					data, err := ioutil.ReadFile(name)
+					f.lockRead.Unlock()
+					if err != nil {
+						logf.error("Error reading file %s\n", name)
+					} else {
+						ans := f.gnode.createAnswer(mes)
+						ans.Order = int64(order)
+						ans.Data = data
+						f.gnode.senderManager.sendMessage(ans)
+						nbSent++
+					}
+				}
+			}
+		}
+	}
+	ans := f.gnode.createAnswer(mes)
+	ans.Order = 0
+	ans.Eof = true
+	ans.NbBlock = int64(nbSent)
+	//logf.info("send back answer: %v\n", ans)
+	f.gnode.senderManager.sendMessage(ans)
 	return nil
 }
