@@ -77,7 +77,7 @@ func (m *fileReceiver) retrieveFileThread(clusterFile string, thread int, nbThre
 			m.chanReceive <- err.Error()
 			return
 		}
-		blockSize := int64(gnode.GNodeBlockSize * 1024)
+		blockSize := int64(gnode.GNodeBlockSize)
 		nbBlock := int64(0)
 		totalBlock := int64(0)
 		orderThreadMap := make(map[int]byte)

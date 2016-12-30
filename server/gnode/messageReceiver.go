@@ -57,6 +57,7 @@ func (r *MessageReceiver) executeMessage(mes *AntMes) {
 		//logf.info("function: %s return: %v\n", mes.Function, ret)
 		if ret[0].Interface() != nil {
 			err := ret[0].Interface().(error)
+			logf.error("function %s, return error: %v\n", mes.Function, err)
 			answer := r.gnode.createAnswer(mes)
 			answer.ErrorMes = err.Error()
 			r.gnode.senderManager.sendMessage(answer)

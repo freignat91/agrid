@@ -14,8 +14,10 @@ import (
 )
 
 //TODO: ramasse miette sur les objet transfer non terminé apres moult
-//TODO: function d'access direct au fichiers avec l'api
-//TODO: si duplicate >x utilisé alors recréer duplicate x
+//TODO: si duplicate x utilisé alors recréer duplicate x-1 si x>1
+//TODO: passer toutes les requetes file par service
+//TODO: utiliser targettedPath plutot que args[0]
+//TODO: mettre implicite le received local pour les target *
 
 var (
 	config GNodeConfig     = GNodeConfig{}
@@ -358,7 +360,10 @@ func (g *GNode) loadOneUser(name string) {
 }
 
 func (g *GNode) checkUser(user string, token string) bool {
-	if user == "" || user == "common" {
+	if user == "" {
+		return false
+	}
+	if user == "common" {
 		return true
 	}
 	check, ok := g.userMap[user]

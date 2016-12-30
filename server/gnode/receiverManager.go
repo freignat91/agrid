@@ -35,6 +35,10 @@ func (m *ReceiverManager) loadFunctions() {
 	m.functionMap["removeFiles"] = m.gnode.fileManager.removeFiles
 	m.functionMap["removeNodeFiles"] = m.gnode.fileManager.removeNodeFiles
 	m.functionMap["sendBackRemoveFilesToClient"] = m.gnode.fileManager.sendBackRemoveFilesToClient
+	//direct file functions
+	m.functionMap["fileSaveBlock"] = m.gnode.fileManager.fileSaveBlock
+	m.functionMap["fileNodeSaveBlock"] = m.gnode.fileManager.fileNodeSaveBlock
+	m.functionMap["fileSaveBlockReturnClient"] = m.gnode.fileManager.fileSaveBlockReturnClient
 	//node Functions
 	m.functionMap["ping"] = m.gnode.nodeFunctions.ping
 	m.functionMap["pingFromTo"] = m.gnode.nodeFunctions.pingFromTo

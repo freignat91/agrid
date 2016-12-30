@@ -244,7 +244,43 @@ Arguments:
 
 List the node of the cluster
 
-### tests
+### func (api *AgridAPI) CreateFile(name string, key string) *AFile, error
+
+Create a new file on cluster and return an AFile instance
+
+## Functions on AFile 
+
+### func (a *AFile) Write(data []byte) (int, error)
+
+Write data in file at the current position
+
+### func (a *AFile) WriteAt(data []byte, at int64) (int, error)
+
+Write data in file at the position 'at'
+
+### func (a *AFile) WriteString(data []byte) (int, error)
+
+Write the string data in file at the current position
+
+### func (a *AFile) WriteStringAt(data []byte, at int64) (int, error)
+
+Write the string data in file at the position 'at'
+
+### func (a *AFile) Seek(pos int64) (int64, error)
+
+Move the current possition to 'pos'
+
+### func (a *AFile) Sync() error
+
+Save the memory data on the cluster
+
+### func (a *AFile) Close() error
+
+Save the memory data on the cluster and free all AFile instance ressources
+
+Create a new file on cluster
+
+# tests
 
 execute: make test
 
