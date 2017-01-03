@@ -305,7 +305,7 @@ execute: make test
 
 # Next versions
 
-- retrieve meta data associate to a file (for now meta data is only stored)
+- retrieve meta data associated to a file (for now meta data is only stored)
 - manage internal files versioning to allow to update and read a file (and its meta data) at the same time
 - allows two (several) agrid clusters to connect one to each other by a given number of shared node connections creating this way an agrid meta cluster able to store and retrieve files with guaranty they have been replicate in each clusters.
 - use agrid meta-cluster to handle geo-cluster replication if each agrid cluster is hosted in different data centers and allow storage and retrieval taking automatically in account such data-center replication.
