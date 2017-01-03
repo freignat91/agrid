@@ -113,9 +113,11 @@ Remove a user. All files in its file space should have been removed first
 `agrid file store [source] [target] <--thread> <--key> <--user>`
 - [source]: the full pathname of the local file to store
 - [target]: the full pathname of the file in the cluster
-- <--thread number>: optionally: number of threads used to store the file (default 1), each thread open a grpc connection on a distinct node.
+- <--thread number>: optionally: number of threads used to store the file (default 1), each thread open a grpc connection on a distinct 
+node and handle a part of the file (all the block n if n%nbThread==threadNumber)
 - <--key>: optionally: AES key to encrypt the file
 - <--user userName:token>: to store on the usee file space, token is given at token creation
+- <--meta key1=value1,key2=value2, ...>
 
 by default, the file is stored 3 times (config NB_DUPLICATE parameter default value)
 
@@ -127,7 +129,7 @@ Retrieve a file from cluster using duplicated blocks if some are missing
 `agrid file retrieve [source] [target] <--thread> <--key> <--user>`
 - [source]: the full pathname of the file to get in cluster
 - [target]: the full pathname of the file to write locally
-- <--thread>: optionally: number of threads used to retrieve the file (default 1), each thread open a grpc connection on a distinct node.
+- <--thread>: optionally: number of threads used to retrieve the file (default 1), each thread open a grpc connection on a distinct node and handle a part of the file (all the block n if n%nbThread==threadNumber)
 - <--key>: optionally: AES key to encrypt the file
 - <--user userName:token>: to store on the usee file space, token is given at user creation
 
@@ -300,6 +302,19 @@ Save the memory data on the cluster and free all AFile instance ressources
 # tests
 
 execute: make test
+
+# Next versions
+
+- retrieve meta data associate to a file (for now meta data is only stored)
+- manage internal files versioning to allow to update and read a file (and its meta data) at the same time
+- allows two (several) agrid clusters to connect one to each other by a given number of shared node connections creating this way an agrid meta cluster able to store and retrieve files with guaranty they have been replicate in each clusters.
+- use agrid meta-cluster to handle geo-cluster replication if each agrid cluster is hosted in different data centers and allow storage and retrieval taking automatically in account such data-center replication.
+- Allow any meta-cluster topologies, an agrid meta-cluster in the same region interconnected with another agrid meta-cluster on another region for instance, opening capacity to have a very large number of nodes engage in the storage/retrieve process,but still having a clear hierarchical usage of them (an optimized usage similar to a virtual quadtree)
+
+
+
+
+
 
 ## License
 
