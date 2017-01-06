@@ -19,7 +19,9 @@ func (g *GNode) ExecuteFunction(ctx context.Context, mes *AntMes) (*AntRet, erro
 		}
 		g.idMap.Add(mes.Id)
 	}
-	g.receiverManager.receiveMessage(mes)
+	if !g.receiverManager.receiveMessage(mes) {
+		return g.getRet(mes.Id, false), nil
+	}
 	return g.getRet(mes.Id, true), nil
 }
 
@@ -38,6 +40,13 @@ func (g *GNode) Ping(ctx context.Context, mes *AntMes) (*PingRet, error) {
 		NbDuplicate:  int32(config.nbDuplicate),
 		ClientNumber: int32(g.clientMap.len()),
 	}, nil
+}
+
+func (g *GNode) Healthcheck(ctx context.Context, req *HealthRequest) (*AntRet, error) {
+	if !g.healthy {
+		return nil, fmt.Errorf("Not ready")
+	}
+	return &AntRet{Ack: true}, nil
 }
 
 func (g *GNode) GetClientStream(stream GNodeService_GetClientStreamServer) error {

@@ -14,7 +14,7 @@ type nodeFunctions struct {
 
 func (n *nodeFunctions) ping(mes *AntMes) error {
 	logf.debug("execute ping from: %s\n", mes.Origin)
-	answer := n.gnode.createAnswer(mes)
+	answer := n.gnode.createAnswer(mes, false)
 	answer.Args = []string{fmt.Sprintf("pong from %s (%s)", n.gnode.name, n.gnode.host)}
 	n.gnode.senderManager.sendMessage(answer)
 	return nil
@@ -43,7 +43,7 @@ func (n *nodeFunctions) pingFromTo(mes *AntMes) error {
 		}
 	}
 	ret += " -> " + target
-	answer := n.gnode.createAnswer(mes)
+	answer := n.gnode.createAnswer(mes, false)
 	answer.Args = []string{ret}
 	fmt.Printf("answer: %v\n", answer)
 	n.gnode.senderManager.sendMessage(answer)
@@ -87,7 +87,7 @@ func (n *nodeFunctions) getConnections(mes *AntMes) error {
 	for name, _ := range n.gnode.targetMap {
 		ret += (" " + name)
 	}
-	answer := n.gnode.createAnswer(mes)
+	answer := n.gnode.createAnswer(mes, true)
 	answer.Args = []string{ret}
 	n.gnode.senderManager.sendMessage(answer)
 	return nil
@@ -137,7 +137,7 @@ func (n *nodeFunctions) createUser(mes *AntMes) error {
 		Function: "createNodeUser",
 		Args:     args,
 	})
-	answer := n.gnode.createAnswer(mes)
+	answer := n.gnode.createAnswer(mes, true)
 	answer.Args = []string{token}
 	n.gnode.senderManager.sendMessage(answer)
 	return nil
@@ -178,7 +178,7 @@ func (n *nodeFunctions) removeUser(mes *AntMes) error {
 	if err != nil {
 		return err
 	}
-	answer := n.gnode.createAnswer(mes)
+	answer := n.gnode.createAnswer(mes, true)
 	answer.Args = []string{token}
 	n.gnode.senderManager.sendMessage(answer)
 	return nil

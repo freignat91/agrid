@@ -16,6 +16,7 @@ type AFile struct {
 	isCreated    bool
 	cipher       *gCipher
 	blocks       map[int]*fBlock
+	version      int
 }
 
 type fBlock struct {
@@ -27,14 +28,18 @@ type fBlock struct {
 }
 
 func (api *AgridAPI) CreateFile(name string, key string) (*AFile, error) {
-	if err := api.FileRm(name, false); err != nil {
-		return nil, err
-	}
 	af := AFile{}
 	af.init(api, name, key)
 	cli, err := api.getClient()
 	if err != nil {
 		return nil, err
+	}
+	stat, exist, errv := api.getFileStat(cli, name, 0, true)
+	if errv != nil {
+		return nil, errv
+	}
+	if exist {
+		af.version = stat.Version
 	}
 	af.client = cli
 	af.isCreated = true
@@ -45,16 +50,19 @@ func (api *AgridAPI) CreateFile(name string, key string) (*AFile, error) {
 func (api *AgridAPI) OpenFile(name string, key string) (*AFile, error) {
 	af := AFile{}
 	af.init(api, name, key)
-	if stat, err := api.FileStat(name); err != nil {
-		return nil, err
-	} else {
-		af.fileSeek = stat.Length
-		af.length = stat.Length
-		af.nbTotalBlock = int(af.length/int64(gnode.GNodeBlockSize)) + 1
-	}
 	cli, err := api.getClient()
 	if err != nil {
 		return nil, err
+	}
+	if stat, exist, err := api.getFileStat(cli, name, 0, false); err != nil {
+		return nil, err
+	} else if !exist {
+		return nil, fmt.Errorf("File %s doesn't exist", name)
+	} else {
+		af.version = stat.Version
+		af.fileSeek = stat.Length
+		af.length = stat.Length
+		af.nbTotalBlock = int(af.length/int64(gnode.GNodeBlockSize)) + 1
 	}
 	af.client = cli
 	api.info("Open file %s length=%d\n", af.name, af.length)
@@ -290,6 +298,7 @@ func (af *AFile) loadBlocks(orderMin int, orderMax int) error {
 		return nil
 	}
 	orderMap := make(map[int]byte)
+	nodeMap := make(map[string]byte)
 	nbReceived := 0
 	nbOrigin := 0
 	for {
@@ -300,8 +309,11 @@ func (af *AFile) loadBlocks(orderMin int, orderMax int) error {
 		af.api.info("received origin=%s order=%d orderMap=%d\n", mes.Origin, mes.Order, len(orderMap))
 		if mes.Eof {
 			nbOrigin++
+			for _, nodeName := range mes.Nodes {
+				nodeMap[nodeName] = 1
+			}
 			nbReceived += int(mes.NbBlock)
-			if nbOrigin == af.client.nbNode {
+			if len(nodeMap) > 0 && nbOrigin == len(nodeMap) {
 				if nbReceived == 0 {
 					af.api.info("No block found\n")
 					return nil

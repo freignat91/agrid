@@ -4,7 +4,7 @@ SHELL := /bin/sh
 BASEDIR := $(shell echo $${PWD})
 
 # build variables (provided to binaries by linker LDFLAGS below)
-VERSION := 0.1.3
+VERSION := 0.1.4
 BUILD := $(shell git rev-parse HEAD | cut -c1-8)
 
 LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"

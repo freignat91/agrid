@@ -69,6 +69,7 @@ func (s *MessageSender) sendMessage(mes *AntMes) error {
 // Send message using all targets
 func (s *MessageSender) broadcastMes(mes *AntMes) error {
 	logf.debugMes(mes, "broadcast message id=%s\n", mes.Id)
+	//logf.info("broadcast message %s path=%v pathIndex=%d\n", mes.toString(), mes.Path, mes.PathIndex)
 	mes.IsPathWriter = true
 	for _, target := range s.gnode.targetMap {
 		s.sendToTarget(target, mes)
@@ -153,9 +154,13 @@ func (s *MessageSender) updateTrace(mes *AntMes) {
 }
 
 func (t *gnodeTarget) sendMessage(mes *AntMes) error {
-	if _, err := t.client.ExecuteFunction(ctx, mes); err != nil {
-		logf.error("Send message error executeFunction error: %s to %s: %v\n", mes.Id, t.name, err)
-		return err
+	for {
+		if ret, err := t.client.ExecuteFunction(ctx, mes); err != nil {
+			logf.error("Send message error executeFunction error: %s to %s: %v\n", mes.Id, t.name, err)
+			return err
+		} else if ret.Ack {
+			return nil
+		}
+		time.Sleep(1 * time.Second)
 	}
-	return nil
 }

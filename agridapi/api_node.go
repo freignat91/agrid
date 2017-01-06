@@ -97,20 +97,20 @@ func (api *AgridAPI) NodeLs() ([]string, error) {
 	if errp != nil {
 		return rep, errp
 	}
-	nb := 0
-	t0 := time.Now()
+	nbOk := 0
+	nodeMap := make(map[string]byte)
 	for {
-		mes, err := client.getNextAnswer(100)
+		mes, err := client.getNextAnswer(1000)
 		if err != nil {
 			return rep, err
-		} else {
-			nb++
-			rep = append(rep, mes.Args[0])
 		}
-		if time.Now().Sub(t0) > time.Second*5 {
-			break
+		api.info("receive answer: %v (%d/%d)\n", mes.Args, nbOk, len(nodeMap))
+		rep = append(rep, mes.Args[0])
+		for _, nodeName := range mes.Nodes {
+			nodeMap[nodeName] = 1
 		}
-		if nb == client.nbNode {
+		nbOk++
+		if len(nodeMap) > 0 && nbOk == len(nodeMap) {
 			break
 		}
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/freignat91/agrid/agridapi"
 	"github.com/spf13/cobra"
+	"strconv"
 	"time"
 )
 
@@ -22,6 +23,7 @@ func init() {
 	FileCmd.AddCommand(FileRmCmd)
 	FileRmCmd.Flags().BoolP("recursive", "r", false, `remomve all files under a directory`)
 	FileRmCmd.Flags().String("user", "", `set user name`)
+	FileRmCmd.Flags().String("version", "", `to remove a specific version only`)
 }
 
 func (m *agridCLI) fileRemove(cmd *cobra.Command, args []string) error {
@@ -38,11 +40,15 @@ func (m *agridCLI) fileRemove(cmd *cobra.Command, args []string) error {
 	api := agridapi.New(m.server)
 	m.setAPILogLevel(api)
 	api.SetUser(cmd.Flag("user").Value.String())
-
-	err := api.FileRm(fileName, recursive)
-	t1 := time.Now()
+	version, err := strconv.Atoi(cmd.Flag("version").Value.String())
 	if err != nil {
-		return err
+		m.Fatal("Error option --version is not a number: %s", cmd.Flag("version").Value.String())
+	}
+
+	errr := api.FileRm(fileName, version, recursive)
+	t1 := time.Now()
+	if errr != nil {
+		return errr
 	}
 	m.pSuccess("File %s removed time=%dms\n", fileName, t1.Sub(t0).Nanoseconds()/1000000)
 	return nil

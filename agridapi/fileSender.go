@@ -23,16 +23,16 @@ func (m *fileSender) init(api *AgridAPI) {
 	m.currentClient = 0
 }
 
-func (m *fileSender) storeFile(fileName string, target string, meta []string, nbThread int, key string) error {
+func (m *fileSender) storeFile(fileName string, target string, meta []string, nbThread int, key string) (int, error) {
 	key = m.api.formatKey(key)
 	f, err := os.Open(fileName)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer f.Close()
 	st, errs := f.Stat()
 	if errs != nil {
-		return errs
+		return 0, errs
 	}
 	length := st.Size()
 	md5 := md5.New()
@@ -49,7 +49,7 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 		m.api.info("nbThread ajusted to: %d\n", nbThread)
 	}
 	if err := m.initClients(nbThread); err != nil {
-		return err
+		return 0, err
 	}
 	defer m.close()
 	transferIds := []string{}
@@ -58,10 +58,21 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 		m.api.info("Encrypted transfer\n")
 		m.cipher = &gCipher{}
 		if err := m.cipher.init([]byte(key)); err != nil {
-			return fmt.Errorf("Cipher init error: %v", err)
+			return 0, fmt.Errorf("Cipher init error: %v", err)
 		}
 	}
-
+	stat, exist, errv := m.api.getFileStat(m.clients[0], target, 0, true)
+	if errv != nil {
+		return 0, fmt.Errorf("getFileStat: %v", errv)
+	}
+	version := 0
+	if exist {
+		version = stat.Version + 1
+		m.api.info("Found file %s version %d, store version %d\n", target, version-1, version)
+	} else {
+		m.api.info("No file %s version found, store version 1\n", target)
+		version = 1
+	}
 	for i, client := range m.clients {
 		nbBlock := totalBlock / int64(nbThread)
 		if totalBlock%int64(nbThread) >= int64(i+1) {
@@ -80,11 +91,12 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 			Metadata:     meta,
 			BlockSize:    int64(blockSize),
 			Key:          key,
+			Version:      int32(version),
 			UserName:     m.api.userName,
 			UserToken:    m.api.userToken,
 		})
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 	m.api.info("Bloc size: %d\n", blockSize)
@@ -104,13 +116,13 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 			if err == io.EOF {
 				break
 			}
-			return err
+			return 0, err
 		}
 		block.Data = block.Data[:n]
 		if m.cipher != nil {
 			dat, err := m.cipher.encrypt(block.Data)
 			if err != nil {
-				return err
+				return 0, err
 			}
 			block.Data = dat
 		}
@@ -125,31 +137,35 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 	m.api.info("Waiting for cluster ack\n")
 	for {
 		for _, client := range m.clients {
-			mes, err := client.getNextAnswer(30000)
+			mes, err := client.getNextAnswer(120000)
 			if err != nil {
-				return err
+				return 0, err
 			}
 			if mes.Function == "FileSendAck" {
 				m.api.info("received ack: %s\n", mes.Origin)
 				okMap[mes.TransferId] = 1
 			} else {
-				m.api.info("File store ongoing\n")
+				m.api.info("File store ongoing (%d)\n", len(okMap))
 			}
 		}
 		if len(okMap) >= nbThread {
 			break
 		}
 	}
+	m.api.info("Cluster ack received\n")
 	for i := 0; i < nbThread; i++ {
 		client := m.getNextClient()
 		client.sendMessage(&gnode.AntMes{
-			Function:   "storeClientAck",
-			Target:     "",
-			TransferId: transferIds[m.currentClient],
+			Function:     "commitFileStorage",
+			Target:       "*",
+			UserName:     m.api.userName,
+			TargetedPath: target,
+			Version:      int32(version),
+			TransferId:   transferIds[m.currentClient],
 		}, false)
 	}
-	m.api.info("Cluster ack received\n")
-	return nil
+	m.api.info("Storage commited\n")
+	return version, nil
 }
 
 func (m *fileSender) close() {

@@ -28,7 +28,7 @@ func (m *ReceiverManager) loadFunctions() {
 	m.functionMap["storeBlocAck"] = m.gnode.fileManager.storeBlockAck
 	m.functionMap["getFileBlocks"] = m.gnode.fileManager.sendBlocks
 	m.functionMap["sendBackBlock"] = m.gnode.fileManager.receivedBackBlock
-	m.functionMap["storeClientAck"] = m.gnode.fileManager.storeClientAck
+	m.functionMap["commitFileStorage"] = m.gnode.fileManager.commitFileStorage
 	m.functionMap["listFiles"] = m.gnode.fileManager.listFiles
 	m.functionMap["listNodeFiles"] = m.gnode.fileManager.listNodeFiles
 	m.functionMap["sendBackListFilesToClient"] = m.gnode.fileManager.sendBackListFilesToClient
@@ -113,26 +113,17 @@ func (m *ReceiverManager) waitForAnswer(id string, timeoutSecond int) (*AntMes, 
 	}
 }
 
-func (m *ReceiverManager) receiveMessage(mes *AntMes) {
-	refused := false
-	for {
-		m.usage++
-		logf.debugMes(mes, "recceive message: %s\n", mes.toString())
-		if m.nbReceiver <= 0 {
-			m.receiver.executeMessage(mes)
-			return
-		}
-		if m.buffer.put(mes) {
-			if refused {
-				logf.warn("Received message: message re-accepted: %v\n", mes.Id)
-			}
-			refused = false
-			return
-		}
-		logf.warn("Received message: buffer full, message temporary refused: %v\n", mes.toString())
-		refused = true
-		time.Sleep(1 * time.Second)
+func (m *ReceiverManager) receiveMessage(mes *AntMes) bool {
+	m.usage++
+	logf.debugMes(mes, "recceive message: %s\n", mes.toString())
+	if m.nbReceiver <= 0 {
+		m.receiver.executeMessage(mes)
+		return true
 	}
+	if !m.buffer.put(mes) {
+		return false
+	}
+	return true
 }
 
 func (m *ReceiverManager) stats() {

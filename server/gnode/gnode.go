@@ -16,8 +16,9 @@ import (
 //TODO: ramasse miette sur les objet transfer non terminé apres moult
 //TODO: si duplicate x utilisé alors recréer duplicate x-1 si x>1
 //TODO: passer toutes les requetes file par service
-//TODO: utiliser targettedPath plutot que args[0]
+//TODO: utiliser targettedPath plutot que args[0] (nottament pour file rm)
 //TODO: mettre implicite le received local pour les target *
+//TODO: avoir un cancel global du transfer dsur transferId sur carch de noeud recepteru ou cancel client
 
 var (
 	config GNodeConfig     = GNodeConfig{}
@@ -25,33 +26,34 @@ var (
 )
 
 type GNode struct {
-	host            string
-	selfIP          *net.IP
-	name            string
-	nodeIndex       int
-	conn            *grpc.ClientConn
-	nbNode          int
-	connectReady    bool
-	targetMap       map[string]*gnodeTarget
-	clientMap       secureMap //map[string]*gnodeClient
-	receiverManager ReceiverManager
-	senderManager   SenderManager
-	startupManager  *gnodeLeader
-	mesNumber       int
-	lastIndexTime   time.Time
-	healthy         bool
-	traceMap        map[string]*gnodeTrace
-	nbRouted        int64
-	idMap           gnodeIdMap
-	nodeNameList    []string
-	logMode         int
-	updateNumber    int
-	reduceMode      bool
-	fileManager     *FileManager
-	lockId          sync.RWMutex
-	dataPath        string
-	nodeFunctions   *nodeFunctions
-	userMap         map[string]string
+	host              string
+	selfIP            *net.IP
+	name              string
+	nodeIndex         int
+	conn              *grpc.ClientConn
+	nbNode            int
+	connectReady      bool
+	targetMap         map[string]*gnodeTarget
+	clientMap         secureMap //map[string]*gnodeClient
+	receiverManager   ReceiverManager
+	senderManager     SenderManager
+	startupManager    *gnodeLeader
+	mesNumber         int
+	lastIndexTime     time.Time
+	healthy           bool
+	traceMap          map[string]*gnodeTrace
+	nbRouted          int64
+	idMap             gnodeIdMap
+	nodeNameList      []string
+	logMode           int
+	updateNumber      int
+	reduceMode        bool
+	fileManager       *FileManager
+	lockId            sync.RWMutex
+	dataPath          string
+	nodeFunctions     *nodeFunctions
+	userMap           map[string]string
+	availableNodeList []string
 }
 
 type gnodeTarget struct {
@@ -203,6 +205,23 @@ func (g *GNode) closeTarget(target *gnodeTarget) {
 	delete(g.targetMap, target.name)
 }
 
+func (g *GNode) updateLocalNodeList() {
+	list := []string{}
+	for name, target := range g.targetMap {
+		if g.isTargetAvailable(target) {
+			list = append(list, name)
+		}
+	}
+	g.availableNodeList = list
+}
+
+func (g *GNode) isTargetAvailable(target *gnodeTarget) bool {
+	if _, err := target.client.Healthcheck(ctx, &HealthRequest{}); err != nil {
+		return false
+	}
+	return true
+}
+
 func (g *GNode) displayConnection() {
 	logf.printf("---------------------------------------------------------------------------------------\n")
 	logf.printf("Node: %s\n", g.name)
@@ -231,8 +250,8 @@ func (g *GNode) getNewId(setAsAlreadySent bool) string {
 	return id
 }
 
-func (g *GNode) createAnswer(mes *AntMes) *AntMes {
-	return &AntMes{
+func (g *GNode) createAnswer(mes *AntMes, withNodeList bool) *AntMes {
+	ans := &AntMes{
 		Function:     fmt.Sprintf("answer-%s", mes.Function),
 		Target:       mes.Origin,
 		OriginId:     mes.Id,
@@ -245,6 +264,10 @@ func (g *GNode) createAnswer(mes *AntMes) *AntMes {
 		IsPathWriter: mes.IsPathWriter,
 		AnswerWait:   mes.AnswerWait,
 	}
+	if withNodeList {
+		ans.Nodes = g.availableNodeList
+	}
+	return ans
 }
 
 func (g *GNode) sendBackClient(clientId string, mes *AntMes) {
@@ -274,6 +297,7 @@ func (g *GNode) startReorganizer() {
 			nn++
 			if nn == 3 {
 				nn = 0
+				g.updateLocalNodeList()
 				g.fileManager.moveRandomBlock()
 			}
 		}

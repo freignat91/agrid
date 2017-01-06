@@ -20,6 +20,7 @@ var FileLsCmd = &cobra.Command{
 func init() {
 	FileCmd.AddCommand(FileLsCmd)
 	FileLsCmd.Flags().String("user", "", `set user name`)
+	FileLsCmd.Flags().Bool("version", false, `if exist display all file versions`)
 }
 
 func (m *agridCLI) fileList(cmd *cobra.Command, args []string) error {
@@ -30,7 +31,11 @@ func (m *agridCLI) fileList(cmd *cobra.Command, args []string) error {
 	api := agridapi.New(m.server)
 	m.setAPILogLevel(api)
 	api.SetUser(cmd.Flag("user").Value.String())
-	lineList, err := api.FileLs(path)
+	version := false
+	if cmd.Flag("version").Value.String() == "true" {
+		version = true
+	}
+	lineList, err := api.FileLs(path, version)
 	if err != nil {
 		m.Fatal("%v\n", err)
 	}

@@ -11,17 +11,17 @@ import (
 )
 
 type gnodeClient struct {
-	api         *AgridAPI
-	id          string
-	client      gnode.GNodeServiceClient
-	nodeName    string
-	nodeHost    string
-	ctx         context.Context
-	stream      gnode.GNodeService_GetClientStreamClient
-	recvChan    chan *gnode.AntMes
-	lock        sync.RWMutex
-	conn        *grpc.ClientConn
-	nbNode      int
+	api      *AgridAPI
+	id       string
+	client   gnode.GNodeServiceClient
+	nodeName string
+	nodeHost string
+	ctx      context.Context
+	stream   gnode.GNodeService_GetClientStreamClient
+	recvChan chan *gnode.AntMes
+	lock     sync.RWMutex
+	conn     *grpc.ClientConn
+	//nbNode      int
 	nbDuplicate int
 }
 
@@ -55,7 +55,7 @@ func (g *gnodeClient) connectServer() error {
 	}
 	g.nodeName = ret.Name
 	g.nodeHost = ret.Host
-	g.nbNode = int(ret.NbNode)
+	//g.nbNode = int(ret.NbNode)
 	g.nbDuplicate = int(ret.NbDuplicate)
 	return nil
 }

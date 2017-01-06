@@ -7,9 +7,11 @@ service GNodeService {
         rpc GetClientStream (stream AntMes) returns (stream AntMes) {}
         rpc AskConnection (AskConnectionRequest) returns (PingRet) {}
         rpc Ping (AntMes) returns (PingRet) {}
+        rpc Healthcheck(HealthRequest) returns (AntRet) {}
         rpc StoreFile(StoreFileRequest) returns (StoreFileRet) {}
         rpc RetrieveFile(RetrieveFileRequest) returns (RetrieveFileRet) {}
 }
+
 
 message AntMes {
         string id = 1;
@@ -37,15 +39,21 @@ message AntMes {
         int32 nb_thread = 23;
         int32 thread = 24;
         int32 duplicate = 25;
-        bool eof = 26;
-        string user_name = 27;
-        string user_token = 28;
-        bytes data = 29;
+        int32 version =26;
+        bool eof = 27;
+        string user_name = 29;
+        string user_token = 30;
+        repeated string nodes = 31;
+        bytes data = 32;
 }
 
 message AntRet{
         bool ack = 1;
         string id = 2;
+}
+
+message HealthRequest {
+        
 }
 
 message PingRet{
@@ -73,7 +81,8 @@ message StoreFileRequest{
         string key = 8;
         string user_name = 9;
         string user_token= 10;
-        repeated string metadata = 11;
+        int32 version=11;
+        repeated string metadata = 12;
 }
 
 message StoreFileRet{
@@ -93,7 +102,9 @@ message RetrieveFileRequest{
         int32 duplicate = 5;
         string user_name = 6;
         string user_token = 7;
-        string block_list = 8;
+        int32 version = 8;
+        string block_list = 9;
+        bool min_max_mode = 10;
 }
 
 message RetrieveFileRet{

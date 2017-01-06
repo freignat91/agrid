@@ -114,8 +114,10 @@ func (g *gnodeLeader) getCommonAddr() error {
 
 func (g *gnodeLeader) waitReady() error {
 	for !g.gnode.healthy {
+		g.gnode.updateLocalNodeList()
 		time.Sleep(3 * time.Second)
 	}
+	g.gnode.updateLocalNodeList()
 	g.gnode.startReorganizer()
 	return nil
 }

@@ -17,7 +17,7 @@ func (r *MessageReceiver) start() {
 		for {
 			mes := <-r.receiverManager.ioChan
 			if mes != nil {
-				logf.info("Receive message eff %v\n", mes.toString())
+				//logf.info("Receive message eff %v\n", mes.toString())
 				r.usage++
 				reached, stop := r.targetReached(mes)
 				if reached {
@@ -58,10 +58,12 @@ func (r *MessageReceiver) executeMessage(mes *AntMes) {
 		if ret[0].Interface() != nil {
 			err := ret[0].Interface().(error)
 			logf.error("function %s, return error: %v\n", mes.Function, err)
-			answer := r.gnode.createAnswer(mes)
+			answer := r.gnode.createAnswer(mes, false)
 			answer.ErrorMes = err.Error()
 			r.gnode.senderManager.sendMessage(answer)
 		}
+	} else {
+		logf.error("Received not supoorted function: %s\n", mes.Function)
 	}
 }
 

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"github.com/freignat91/agrid/agridapi"
 	"github.com/spf13/cobra"
+	"os"
 	"strconv"
 	"time"
 )
@@ -22,9 +24,10 @@ var FileRetrieveCmd = &cobra.Command{
 func init() {
 	FileCmd.AddCommand(FileRetrieveCmd)
 	FileRetrieveCmd.Flags().Int("thread", 1, "send thread number")
-	FileRetrieveCmd.Flags().String("meta", "", "metadata folowing the file format: name:value, name:value, ...")
+	FileRetrieveCmd.Flags().String("meta", "", "meta file name (default no metadata file)")
 	FileRetrieveCmd.Flags().String("key", "", "AES key to encrypt file, 32 bybes")
 	FileRetrieveCmd.Flags().String("user", "", `set user name`)
+	FileRetrieveCmd.Flags().String("version", "0", `to retrieve a specific version, default last one`)
 }
 
 func (m *agridCLI) fileRetrieve(cmd *cobra.Command, args []string) error {
@@ -37,16 +40,34 @@ func (m *agridCLI) fileRetrieve(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		m.Fatal("Error option --thread is not a number: %s", cmd.Flag("thread").Value.String())
 	}
+	version, err := strconv.Atoi(cmd.Flag("version").Value.String())
+	if err != nil {
+		m.Fatal("Error option --version is not a number: %s", cmd.Flag("thread").Value.String())
+	}
 	m.pInfo("Execute: retrieve file: %s to %s\n", clusterFile, localFile)
 	key := cmd.Flag("key").Value.String()
+	metaFileName := cmd.Flag("meta").Value.String()
 	t0 := time.Now()
 
 	api := agridapi.New(m.server)
 	m.setAPILogLevel(api)
 	api.SetUser(cmd.Flag("user").Value.String())
-	if err := api.FileRetrieve(clusterFile, localFile, nbThread, key); err != nil {
+	metaMap, version, err := api.FileRetrieve(clusterFile, localFile, version, nbThread, key)
+	if err != nil {
 		return err
 	}
-	m.pSuccess("file %s received (%dms)\n", localFile, time.Now().Sub(t0).Nanoseconds()/1000000)
+	if metaFileName != "" {
+		file, err := os.Create(metaFileName)
+		if err != nil {
+			return fmt.Errorf("Metadata file creation error: %v\n", err)
+		}
+		for key, val := range metaMap {
+			if _, err := file.WriteString(fmt.Sprintf("%s=%s\n", key, val)); err != nil {
+				return fmt.Errorf("Metadata file writing error: %v\n", err)
+			}
+		}
+		file.Close()
+	}
+	m.pSuccess("file %s v%d received (%dms)\n", localFile, version, time.Now().Sub(t0).Nanoseconds()/1000000)
 	return nil
 }

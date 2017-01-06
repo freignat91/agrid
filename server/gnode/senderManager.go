@@ -15,6 +15,7 @@ type SenderManager struct {
 }
 
 func (m *SenderManager) start(gnode *GNode, bufferSize int, maxGoRoutine int) {
+	maxGoRoutine = 0
 	m.gnode = gnode
 	m.nbSender = maxGoRoutine
 	m.buffer.init(bufferSize)
@@ -44,7 +45,7 @@ func (m *SenderManager) start(gnode *GNode, bufferSize int, maxGoRoutine int) {
 	}()
 }
 
-func (m *SenderManager) sendMessage(mes *AntMes) bool {
+func (m *SenderManager) sendMessage(mes *AntMes) error {
 	m.usage++
 	if mes.Id == "" {
 		mes.Id = m.gnode.getNewId(true)
@@ -52,15 +53,19 @@ func (m *SenderManager) sendMessage(mes *AntMes) bool {
 			mes.Origin = m.gnode.name
 		}
 	}
+	return m.sender.sendMessage(mes)
 	//logf.info("send message: %s\n", mes.toString())
-	if m.nbSender <= 0 {
-		m.sender.sendMessage(mes)
+	/*
+		if m.nbSender <= 0 {
+			m.sender.sendMessage(mes)
+			return true
+		}
+		for {
+		if !m.buffer.put(mes) {
+			return false
+		}
 		return true
-	}
-	if !m.buffer.put(mes) {
-		logf.warn("Buffer full message refused: %s\n", mes.toString())
-	}
-	return true
+	*/
 }
 
 func (m *SenderManager) sendMessageReturnAnswer(mes *AntMes, timeoutSecond int) (*AntMes, error) {

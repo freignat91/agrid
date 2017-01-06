@@ -53,9 +53,10 @@ func (m *agridCLI) fileStore(cmd *cobra.Command, args []string) error {
 	api := agridapi.New(m.server)
 	m.setAPILogLevel(api)
 	api.SetUser(cmd.Flag("user").Value.String())
-	if err := api.FileStore(fileName, targetedPath, meta, nbThread, key); err != nil {
+	version, err := api.FileStore(fileName, targetedPath, meta, nbThread, key)
+	if err != nil {
 		return err
 	}
-	m.pSuccess("file %s stored as %s (%dms)\n", fileName, targetedPath, time.Now().Sub(t0).Nanoseconds()/1000000)
+	m.pSuccess("file %s stored as %s v%d (%dms)\n", fileName, targetedPath, version, time.Now().Sub(t0).Nanoseconds()/1000000)
 	return nil
 }

@@ -38,7 +38,7 @@ Agrid use Ant like behavior to found the shortest path between two nodes. The pa
 - Docker 1.12.3 min should be installed 
 - clone this project
 - execute `make install` to build the agrid command line executable
-- execute `make build` to create a image freignat91/agrid:latest
+- execute `make build` to create a image freignat91/agrid:latest, if needed, or docker pull freignat/agrid:latest from dockerhub
 - start the service: `make start` to create a service agrid using 3 nodes (update Makafile or execute directly the "docker service create" command to change the number of nodes or orher parameters)
 
 for instance with 5 nodes, using a publish port 30103 and network aNetwork
@@ -53,7 +53,7 @@ docker service create --network aNetwork --name agrid \
 
 # Resilience
 
-For resilience reason, it's better to have a separated disk file system for each node (each node on its own VM), but for test reason it's possible to use nodes on the same file system or have architecture with several nodes on several VMs.
+For resilience reason, it's better to have a separated disk file system for each node (each node on its own VM), but for test reason it's possible to have several nodes on the same file system or have architecture with several nodes on several VMs, but the used mermory on file retrieve command will be higher than normal.
 
 ## Node crash
 
@@ -61,27 +61,27 @@ If a node crash (agrid itself, or disk file system failure or VM failure), docke
 
 ## Scale out
 
-To scale out the number of nodes, it's enough to use `docker service scale agrid=xxx` command. Agrid will recompute its grid recreating all the node connections accordingly to the number of nodes
+To scale out, it's enough to use `docker service scale agrid=xxx` command. Agrid will recompute its grid recreating all the node connections accordingly to the number of nodes
 
 ## Scale in
 
-To scale in the number of nodes, it's enough to use `docker service scale agrid=xxx` command. Agrid will recompute its grid recreating all the node connections accordingly to the number of nodes. Warning, to do not lose files, it's important to scale in with a difference between the number of nodes lower than the NB_DUPLICATE parameter and let time to Agrid to reorganize the files blocks between each scale command
+To scale in, it's enough to use `docker service scale agrid=xxx` command. Agrid will recompute its grid recreating all the node connections accordingly to the number of nodes. Warning, to do not lose files, it's important to scale in with a difference between the number of nodes lower than the NB_DUPLICATE parameter and let time to Agrid to reorganize the files blocks between each scale command
 
 ## Grid simulation
 
-To simulate nodes connections using different parameters as, node number, line connections, cross connections, use the cli command:
+To simulate nodes connections using different parameters as, node number, line connections, cross connections,and see the grid topology, use the cli command:
 
-`agrid grid simul [nodes] <--line> <--cross>`
+`agrid grid simul [nodes] <--line xx > <--cross yy>`
 - [nodes] the number of nodes
-- <--line> optionally: the number of line connections 
-- <--cross> optionally: the number of cross connections 
+- <--line xx> optionally: xx the number of line connections 
+- <--cross yy> optionally: yy the number of cross connections 
 
 this command as not effect on the real cluster grid connections.see (./docs/Agrid-grid-building.pptx, ./docs/Agrid-Ant-net.pptx)
 
 ## Users
 
-Agrid use a "common" file space by default, everyone can access to this space. Even if files can be encrypted with a specific key, it's possible to create a user. A user create a dedicated file space that no one can access except the user. A user can see and act only on its own file space.
-To authenticate a user a token a given at user creation by the cluster, this token should be provided for all commands used with a user.
+Agrid use a "common" file space by default, everyone can access to this space. Even if files can be encrypted with a specific key, it's possible to create a user to ensure more confidentiality. Create a user, create at the same time a dedicated file space that no one can access except the user. A user can see and act only on its own file space.
+To authenticate a user a token a given at user creation by the cluster, this token should be provided for all commands used with a user. It's also possible to provide your own token at user creation and use it for all commandes with this user.
 
 
 # CLI
@@ -91,7 +91,7 @@ Agrid command lines is implemented using the Agrid Go API
 ### common options
 
 - --verbose: display more informations messages
-- --server: format addr1:port,addr2:port, ...   list of the cluster servers (can list less servers than really in the cluster)
+- --server: format addr1:port,addr2:port, ...   list of the cluster servers (can list less servers than really in the cluster).
 
 ### create a user
 `agrid user create [username] <--token>`
@@ -101,14 +101,14 @@ Create a user with its own file space in the cluster. This command return a toke
 - <--token> set the token for this user, without the token is computed by the server
 
 ### remove a user
-`agrid user remove [username] <--force>`
+`agrid user remove [user] <--force>`
 
 Remove a user. All files in its file space should have been removed first
 
-- [username] the user name to remove, format userName:token
+- [user] the user to remove, format userName:token
 - <--force> if this option exist then the user is removed with all its associated files, if not the user is removed only if its file space is empty.
 
-### store a file on cluster:
+### store a new verison of a file on cluster:
 
 `agrid file store [source] [target] <--thread> <--key> <--user>`
 - [source]: the full pathname of the local file to store
@@ -132,12 +132,15 @@ Retrieve a file from cluster using duplicated blocks if some are missing
 - <--thread>: optionally: number of threads used to retrieve the file (default 1), each thread open a grpc connection on a distinct node and handle a part of the file (all the block n if n%nbThread==threadNumber)
 - <--key>: optionally: AES key to encrypt the file
 - <--user userName:token>: to store on the usee file space, token is given at user creation
+- <--meta> metadata file name, default: no metadata file
+- <--version nn> retrieve the version nn, default: the last version
 
 ### list the files on the cluster
 
 `agrid file ls [path] <--user>`
 - [path]: path name on the cluster to list, default /
-- <--user userName:token>: to store on the usee file space, token is given at user creation
+- <--user userName:token>: to store on the user file space, token is given at user creation
+- <--version> if exist, list all versions for all selected files
 
 
 ### remove a file on the cluster
@@ -146,6 +149,7 @@ Retrieve a file from cluster using duplicated blocks if some are missing
 - [pathname]: full pathname of the file to remove on the cluster
 - <-r>: to remove a folder recursively
 - <--user userName:token>: to store on the usee file space, token is given at user creation
+- <--version nn> remove a specific version of the file, default: remove all the versions
 
 ### list the cluster nodes
 
@@ -171,14 +175,14 @@ Agrid is usable using Go api API github.com/freignat91/agrid/agridapi
         ...
 ```
 
-### func (api *AgridAPI) userCreate(name string, token string) (string, error)
+### func (api *AgridAPI) UserCreate(name string, token string) (string, error)
 
 Create a new user, return a token to authenticate the user
 Argument
 - name: the user name to create
 - token: if equal to "", the token is computed by server, if not it'sused as the user token.
 
-### func (api *AgridAPI) userRemove(name string, force bool) error
+### func (api *AgridAPI) UserRemove(name string, force bool) error
 
 Remove a user
 Argument
@@ -191,15 +195,16 @@ Set the current user and authenticate it with the token, then every api function
 Arguements:
 - user: format userName:token, or "" to set the common user
 
-### func (api *AgridAPI) FileLs(folder string) ([]string, error)
+### func (api *AgridAPI) FileLs(folder string, version bool) ([]string, error)
 
 List the file stored on the cluster
 Argument:
 - folder: Folder under which the files are listed
+- version: if true list all the versions of the selected files
 
-### func (api *AgridAPI) FileStore(localFile string, clusterPathname string, meta *[]string, nbThread int, key string) error 
+### func (api *AgridAPI) FileStore(localFile string, clusterPathname string, meta *[]string, nbThread int, key string) (int, error)
 
-Store a file on the cluster
+Store a file on the cluster, rerturn the version stored and error if happend.
 Arguments:
 - localFile: pathname of the local file to store
 - clusterPathName: pathname of the file on the cluster
@@ -207,21 +212,23 @@ Arguments:
 - nbThread: number of threads used to store the file (each thread open a distinc grpc connection)
 - key: AES key to encrypt the file on the cluster 
 
-### func (api *AgridAPI) FileRetrieve(clusterPathname string, localFile string, nbThread int, key string) error
+### func (api *AgridAPI) FileRetrieve(clusterPathname string, localFile string, version int, nbThread int, key string) (map[string]string, int, error)
 
-Get a file from the cluster
+Retrieve a file from the cluster and return its metadata, its version and error if happend
 Arguments:
 - clusterPathname: pathname of the file to get on the cluster
 - localFile: pathname of the file to write locally
+- version: to retrieve a specific version, default: the last version is retrieved
 - nbThread: number of threads used to store the file (each thread open a distinc grpc connection)
 - key: AES key to decrypt the file
 
-### func (api *AgridAPI) FileRm(clusterPathname string, recursive bool) (error, bool) 
+### func (api *AgridAPI) FileRm(clusterPathname string, version int, recursive bool) (error, bool) 
 
 Remove a file on the cluster
 Arguments:
 - clusterPathname: pathname of the file to remove on the cluster
 - recusive: if true remove all files under the clusterPathname
+- version: to remove a specifiv version, default: all versions are removed
 
 ### func (api *AgridAPI) NodePing(node string, debugTrace bool) (string, error)
 
@@ -258,7 +265,7 @@ if key != "", encrypte the data with the key (AES256)
 Open an existing file on cluster, move the current position to the end of file and return an AFile instance
 if key != "", encrypte the data with the key (AES256)
 
-## Functions on AFile 
+## Functions on AFile (experimental part)
 
 ### func (a *AFile) Write(data []byte) (int, error)
 
@@ -305,15 +312,9 @@ execute: make test
 
 # Next versions
 
-- retrieve meta data associated to a file (for now meta data is only stored)
-- manage internal files versioning to allow to update and read a file (and its meta data) at the same time
 - allows two (several) agrid clusters to connect one to each other by a given number of shared node connections creating this way an agrid meta cluster able to store and retrieve files with guaranty they have been replicate in each clusters.
 - use agrid meta-cluster to handle geo-cluster replication if each agrid cluster is hosted in different data centers and allow storage and retrieval taking automatically in account such data-center replication.
 - Allow any meta-cluster topologies, an agrid meta-cluster in the same region interconnected with another agrid meta-cluster on another region for instance, opening capacity to have a very large number of nodes engage in the storage/retrieve process,but still having a clear hierarchical usage of them (an optimized usage similar to a virtual quadtree)
-
-
-
-
 
 
 ## License
