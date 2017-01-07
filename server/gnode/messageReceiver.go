@@ -49,6 +49,7 @@ func (r *MessageReceiver) targetReached(mes *AntMes) (bool, bool) {
 }
 
 func (r *MessageReceiver) executeMessage(mes *AntMes) {
+	//logf.info("execute message function=%s duplicate=%d order=%d ok\n", mes.Function, mes.Duplicate, mes.Order)
 	//Internal functions format: function(mes *AntMes) error
 	if function, ok := r.receiverManager.functionMap[mes.Function]; ok {
 		f := reflect.ValueOf(function)

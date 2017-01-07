@@ -13,7 +13,7 @@ func (api *AgridAPI) InfoWriteStats(node string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := client.createSendMessage(node, true, "writeStatsInLog"); err != nil {
+	if _, err := client.createSendMessage(node, false, "writeStatsInLog"); err != nil {
 		return err
 	}
 	return nil
@@ -25,7 +25,7 @@ func (api *AgridAPI) InfoGetNodeName(index int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	ret, err := client.createSendMessage("", true, "getNodeName", fmt.Sprintf("%d", index))
+	ret, err := client.createSendMessage("", false, "getNodeName", fmt.Sprintf("%d", index))
 	if err != nil {
 		return "", err
 	}

@@ -5,21 +5,25 @@ import (
 )
 
 type MessageBuffer struct {
-	maxSize int
-	size    int
-	values  []*AntMes
-	in      int
-	out     int
-	lock    sync.RWMutex
-	ioChan  chan string
-	max     int //For stats
+	maxSize       int
+	overflowLimit int
+	size          int
+	values        []*AntMes
+	in            int
+	out           int
+	lock          sync.RWMutex
+	ioChan        chan string
+	max           int //For stats
+	overflow      bool
 }
 
 func (m *MessageBuffer) init(size int) {
 	m.maxSize = size
+	m.overflowLimit = (size * 8) / 10
 	m.values = make([]*AntMes, size, size)
 	m.ioChan = make(chan string)
 	m.lock = sync.RWMutex{}
+	m.overflow = false
 }
 
 func (m *MessageBuffer) get(wait bool) (*AntMes, bool) {
@@ -32,23 +36,30 @@ func (m *MessageBuffer) get(wait bool) (*AntMes, bool) {
 		}
 	}
 	m.lock.Lock()
-	defer m.lock.Unlock()
 	mes := m.values[m.out]
 	m.values[m.out] = nil
 	m.out = m.incrIndex(m.out)
 	m.size--
-	if m.size == 0 {
-		m.in = 0
-		m.out = 0
+	if m.size < m.overflowLimit {
+		m.overflow = false
+		if m.size == 0 {
+			m.in = 0
+			m.out = 0
+		}
 	}
+	m.lock.Unlock()
 	return mes, true
 }
 
 func (m *MessageBuffer) put(mes *AntMes) bool {
+	if m.overflow {
+		return false
+	}
 	m.lock.Lock()
 	//logf.info("BufferPut in=%d out=%d size=%d\n", m.in, m.out, m.size)
-	defer m.lock.Unlock()
 	if m.size >= m.maxSize {
+		m.overflow = true
+		m.lock.Unlock()
 		return false
 	}
 	m.values[m.in] = mes
@@ -61,6 +72,7 @@ func (m *MessageBuffer) put(mes *AntMes) bool {
 	case <-m.ioChan:
 	default:
 	}
+	m.lock.Unlock()
 	return true
 }
 
@@ -74,11 +86,18 @@ func (m *MessageBuffer) incrIndex(index int) int {
 
 func (m *MessageBuffer) Clear() {
 	m.lock.Lock()
-	defer m.lock.Unlock()
 	for i, _ := range m.values {
 		m.values[i] = nil
 	}
 	m.in = 0
 	m.out = 0
 	m.size = 0
+	m.lock.Unlock()
+}
+
+func (m *MessageBuffer) isAvailable() bool {
+	if m.size >= m.maxSize {
+		return false
+	}
+	return true
 }

@@ -29,7 +29,7 @@ type receiveSession struct {
 	thread           int
 	nbBlock          int
 	lastBlockList    string
-	blocListTry      int
+	blockListTry     int
 }
 
 func (m *fileReceiver) init(api *AgridAPI) {
@@ -134,7 +134,6 @@ func (m *fileReceiver) retrieveFileThread(clusterFile string, thread int, nbThre
 				}
 			} else {
 				timeoutDelay = 1000
-				session.blocListTry = 0
 				if session.nbBlock == 0 && mes.Order > 0 {
 					totalBlock = mes.NbBlock
 					session.nbBlock = int(totalBlock / int64(nbThread))
@@ -170,6 +169,7 @@ func (m *fileReceiver) retrieveFileThread(clusterFile string, thread int, nbThre
 						break
 					}
 				} else {
+					session.blockListTry = 0
 					m.writeLock.Lock()
 					if _, err := file.Seek((mes.Order-1)*blockSize, 0); err != nil {
 						m.writeLock.Unlock()
@@ -211,8 +211,8 @@ func (m *fileReceiver) receivedTimeout(session *receiveSession) bool {
 		return true
 	}
 	if blockList == session.lastBlockList {
-		session.blocListTry++
-		if session.blocListTry > session.client.nbDuplicate {
+		session.blockListTry++
+		if session.blockListTry > session.client.nbDuplicate {
 			m.chanReceive <- fmt.Sprintf("still missing %d blocks on all duplicate", nn)
 			return true
 		}
@@ -221,11 +221,11 @@ func (m *fileReceiver) receivedTimeout(session *receiveSession) bool {
 			session.currentDuplicate = 1
 		}
 	} else {
-		session.blocListTry = 1
+		session.blockListTry = 1
 	}
 	session.lastBlockList = blockList
-	m.api.info("Thread %d recalls %d blocks duplicate=%d\n", session.thread, nn, session.currentDuplicate)
-	//m.api.info("Thread %d recalls blocks duplicate=%d: %s\n", session.thread, session.currentDuplicate, blockList)
+	//m.api.info("Thread %d recalls %d blocks duplicate=%d\n", session.thread, nn, session.currentDuplicate)
+	m.api.info("Thread %d recalls blocks duplicate=%d try=%d: %s\n", session.thread, session.currentDuplicate, session.blockListTry, blockList)
 	session.req.Duplicate = int32(session.currentDuplicate)
 	session.req.BlockList = blockList
 	if _, err := session.client.client.RetrieveFile(context.Background(), session.req); err != nil {

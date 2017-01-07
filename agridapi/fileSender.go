@@ -141,12 +141,7 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 			if err != nil {
 				return 0, err
 			}
-			if mes.Function == "FileSendAck" {
-				m.api.info("received ack: %s\n", mes.Origin)
-				okMap[mes.TransferId] = 1
-			} else {
-				m.api.info("File store ongoing (%d)\n", len(okMap))
-			}
+			okMap[mes.TransferId] = 1
 		}
 		if len(okMap) >= nbThread {
 			break

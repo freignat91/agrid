@@ -23,7 +23,8 @@ type ReceiverManager struct {
 
 func (m *ReceiverManager) loadFunctions() {
 	m.functionMap = make(map[string]interface{})
-	//file functions
+	//file functiont
+	m.functionMap["sendBlock"] = m.gnode.fileManager.receiveBlocFromClient
 	m.functionMap["storeBlock"] = m.gnode.fileManager.storeBlock
 	m.functionMap["storeBlocAck"] = m.gnode.fileManager.storeBlockAck
 	m.functionMap["getFileBlocks"] = m.gnode.fileManager.sendBlocks
@@ -120,10 +121,11 @@ func (m *ReceiverManager) receiveMessage(mes *AntMes) bool {
 		m.receiver.executeMessage(mes)
 		return true
 	}
-	if !m.buffer.put(mes) {
-		return false
+	if m.buffer.put(mes) {
+		//logf.info("receive message function=%s duplicate=%d order=%d ok\n", mes.Function, mes.Duplicate, mes.Order)
+		return true
 	}
-	return true
+	return false
 }
 
 func (m *ReceiverManager) stats() {
@@ -162,28 +164,19 @@ func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamS
 			m.gnode.nodeFunctions.forceGC()
 			return
 		}
-		if mes.Function == "sendBlock" {
-			if err := m.gnode.fileManager.receiveBlocFromClient(mes); err != nil {
-				stream.Send(&AntMes{
-					Function: "sendBlock",
-					ErrorMes: err.Error(),
-				})
+		mes.Id = m.gnode.getNewId(false)
+		mes.Origin = m.gnode.name
+		mes.FromClient = clientName
+		m.gnode.idMap.Add(mes.Id)
+		if mes.Debug {
+			logf.debugMes(mes, "-------------------------------------------------------------------------------------------------------------\n")
+			logf.debugMes(mes, "Receive mes from client %s : %v\n", clientName, mes)
+		}
+		for {
+			if m.gnode.receiverManager.receiveMessage(mes) {
+				break
 			}
-		} else {
-			mes.Id = m.gnode.getNewId(false)
-			mes.Origin = m.gnode.name
-			mes.FromClient = clientName
-			if mes.Debug {
-				logf.debugMes(mes, "-------------------------------------------------------------------------------------------------------------\n")
-				logf.debugMes(mes, "Receive mes from client %s : %v\n", clientName, mes)
-			}
-			m.gnode.idMap.Add(mes.Id)
-			m.gnode.receiverManager.receiveMessage(mes)
-			/*
-				if !mes.ReturnAnswer {
-					stream.Send(&AntMes{Origin: m.gnode.name})
-				}
-			*/
+			time.Sleep(1 * time.Second)
 		}
 	}
 }

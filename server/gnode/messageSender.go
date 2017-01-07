@@ -2,7 +2,7 @@ package gnode
 
 import (
 	"fmt"
-	"strings"
+	//"strings"
 	"time"
 )
 
@@ -55,13 +55,15 @@ func (s *MessageSender) sendMessage(mes *AntMes) error {
 	}
 	if target, ok := s.gnode.targetMap[mes.Target]; ok {
 		logf.debugMes(mes, "Send message direc to target id=%s\n", mes.Id)
-		return s.sendToTarget(target, mes)
+		s.sendToTarget(target, mes)
+		return nil
 	}
 	if trace, ok := s.gnode.traceMap[mes.Target]; ok {
 		trace.nbUsed++
 		logf.debugMes(mes, "Use trace on target %s : %d\n", trace.target.name, trace.nbUsed)
 		//logf.info("Use trace on target %s : %d\n", trace.target.name, trace.nbUsed)
-		return s.sendToTarget(trace.target, mes)
+		s.sendToTarget(trace.target, mes)
+		return nil
 	}
 	return s.broadcastMes(mes)
 }
@@ -99,21 +101,17 @@ func (s *MessageSender) sendBackMesFollowingPath(mes *AntMes) error {
 }
 
 // send the message using one specific target
-func (s *MessageSender) sendToTarget(target *gnodeTarget, mes *AntMes) error {
+//TODO: manager connection broken and reconnection
+func (s *MessageSender) sendToTarget(target *gnodeTarget, mes *AntMes) {
 	logf.debugMes(mes, "Send message %s to target %s (%s)\n", mes.Id, target.name, target.host)
 	err := target.sendMessage(mes)
 	if err != nil {
-		if strings.Index(err.Error(), "the connection is unavailable") >= 0 {
-			logf.info("Connection is broken with %s (%s)\n", target.name, target.host)
-			s.gnode.closeTarget(target)
-			if s.gnode.reduceMode {
-				s.gnode.startupManager.sendUpdateGrid()
-			}
-			return err
+		logf.info("Connection is broken with %s (%s)\n", target.name, target.host)
+		s.gnode.closeTarget(target)
+		if s.gnode.reduceMode {
+			s.gnode.startupManager.sendUpdateGrid()
 		}
-		return fmt.Errorf("Message id=%s route gnode %s ExecuteFunction error: %v\n", mes.Id, target.name, err)
 	}
-	return nil
 }
 
 // add a trace giving the direction (a local target) to reach a target (the Origin)
@@ -154,12 +152,27 @@ func (s *MessageSender) updateTrace(mes *AntMes) {
 }
 
 func (t *gnodeTarget) sendMessage(mes *AntMes) error {
+	//isError := false
 	for {
-		if ret, err := t.client.ExecuteFunction(ctx, mes); err != nil {
-			logf.error("Send message error executeFunction error: %s to %s: %v\n", mes.Id, t.name, err)
-			return err
-		} else if ret.Ack {
-			return nil
+		ok := true
+		/*
+			if isError && len(mes.Data) > 0 {
+				//in case of error check target without sending the data
+				if check, err := t.client.CheckReceiver(ctx, &HealthRequest{}); err != nil || !check.Ack {
+					ok = false
+				}
+			}
+		*/
+		if ok {
+			if ret, err := t.client.ExecuteFunction(ctx, mes); err != nil {
+				logf.error("Send message return error: %s to %s: %v\n", mes.toString(), t.name, err)
+				return err
+			} else if ret.Ack {
+				logf.debugMes(mes, "Send message: message actually accepted by target: %v order=%d\n", mes.toString(), mes.Order)
+				return nil
+			}
+			logf.debugMes(mes, "Send message: message refused by target: %v order=%d\n", mes.toString(), mes.Order)
+			//isError = true
 		}
 		time.Sleep(1 * time.Second)
 	}

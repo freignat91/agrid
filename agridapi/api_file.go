@@ -53,7 +53,7 @@ func (api *AgridAPI) FileLs(folder string, version bool) ([]string, error) {
 				nbOk++
 				//api.info("Node EOF %s: nbMes:%d  w:%d r:%d  wok=%d rok=%d\n", mes.Origin, mes.Order, nbWaited, nbReceived, client.nbNode, nbOk)
 			}
-			if len(nodeMap) > 0 && nbOk == len(nodeMap) && nbWaited == nbReceived {
+			if len(nodeMap) > 0 && nbOk >= len(nodeMap) && nbWaited == nbReceived {
 				break
 			}
 		}
@@ -120,7 +120,7 @@ func (api *AgridAPI) FileRm(clusterPathname string, version int, recursive bool)
 			nodeMap[nodeName] = 1
 		}
 		nbOk++
-		if len(nodeMap) > 0 && nbOk == len(nodeMap) {
+		if len(nodeMap) > 0 && nbOk >= len(nodeMap) {
 			break
 		}
 	}
@@ -170,11 +170,11 @@ func (api *AgridAPI) getFileStat(client *gnodeClient, name string, version int, 
 		}
 		nbOk++
 		api.info("Receive answer: %v (%d/%d) found=%s nodes=%v\n", mes.Origin, nbOk, len(nodeMap), mes.Args[0], mes.Nodes)
-		if len(nodeMap) > 0 && nbOk == len(nodeMap) {
+		if len(nodeMap) > 0 && nbOk >= len(nodeMap) {
 			break
 		}
 	}
-	if nbNotFound == len(nodeMap) {
+	if nbNotFound >= len(nodeMap) {
 		return nil, false, nil
 	}
 	api.info("stat=%+v\n", stat)

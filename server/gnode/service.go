@@ -15,21 +15,14 @@ func (g *GNode) ExecuteFunction(ctx context.Context, mes *AntMes) (*AntRet, erro
 	} else {
 		if ok := g.idMap.Exists(mes.Id); ok {
 			//logf.info("execute store bloc ack doublon id=%s order=%d\n", mes.Id, mes.Order)
-			return g.getRet(mes.Id, true), nil
+			return &AntRet{Ack: true}, nil
 		}
 		g.idMap.Add(mes.Id)
 	}
 	if !g.receiverManager.receiveMessage(mes) {
-		return g.getRet(mes.Id, false), nil
+		return &AntRet{Ack: false}, nil
 	}
-	return g.getRet(mes.Id, true), nil
-}
-
-func (g *GNode) getRet(id string, ack bool) *AntRet {
-	return &AntRet{
-		Id:  id,
-		Ack: ack,
-	}
+	return &AntRet{Ack: true}, nil
 }
 
 func (g *GNode) Ping(ctx context.Context, mes *AntMes) (*PingRet, error) {
@@ -40,6 +33,10 @@ func (g *GNode) Ping(ctx context.Context, mes *AntMes) (*PingRet, error) {
 		NbDuplicate:  int32(config.nbDuplicate),
 		ClientNumber: int32(g.clientMap.len()),
 	}, nil
+}
+
+func (g *GNode) CheckReceiver(ctx context.Context, req *HealthRequest) (*AntRet, error) {
+	return &AntRet{Ack: g.receiverManager.buffer.isAvailable()}, nil
 }
 
 func (g *GNode) Healthcheck(ctx context.Context, req *HealthRequest) (*AntRet, error) {

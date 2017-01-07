@@ -23,7 +23,6 @@ type FileManager struct {
 	transferMap    secureMap //map[string]*FileTransfer
 	transferNumber int
 	lockRead       sync.RWMutex
-	commitedMap    map[string]time.Time
 	nbRead         int
 }
 
@@ -51,7 +50,6 @@ type FileTransfer struct {
 func (f *FileManager) init(gnode *GNode) {
 	f.gnode = gnode
 	f.transferMap.init()
-	f.commitedMap = make(map[string]time.Time)
 	f.lockRead = sync.RWMutex{}
 }
 
@@ -86,7 +84,7 @@ func (f *FileManager) storeFile(req *StoreFileRequest) (*StoreFileRet, error) {
 
 func (f *FileManager) receiveBlocFromClient(mes *AntMes) error {
 	if !f.transferMap.exists(mes.TransferId) {
-		return fmt.Errorf("Received bloc from client on a not started transfert")
+		return fmt.Errorf("Received bloc from client on a not started transfert name=%s version=%s order=%d", mes.TargetedPath, mes.Version, mes.Order)
 	}
 	transfer := f.transferMap.get(mes.TransferId).(*FileTransfer)
 	pos := int(rand.Int31n(int32(len(f.gnode.nodeNameList))))
@@ -133,28 +131,20 @@ func (f *FileManager) receiveBlocFromClient(mes *AntMes) error {
 func (f *FileManager) storeBlockAck(mes *AntMes) error {
 	//logf.info("StoreBlockAck tf=%s order %d\n", mes.TransferId, mes.Order)
 	if !f.transferMap.exists(mes.TransferId) {
-		return fmt.Errorf("Received bloc ack on a not started transfert")
+		return fmt.Errorf("Received bloc ack on a not started transfert name=%s version=%s order=%d", mes.TargetedPath, mes.Version, mes.Order)
 	}
 	transfer := f.transferMap.get(mes.TransferId).(*FileTransfer)
-	logf.info("storeBackAck: version=%d order=%d duplicate=%d (%d/%d)\n", mes.Version, mes.Order, mes.Duplicate, len(transfer.orderMap), transfer.toBeReceived)
+	//logf.info("storeBackAck: version=%d order=%d duplicate=%d (%d/%d)\n", mes.Version, mes.Order, mes.Duplicate, len(transfer.orderMap), transfer.toBeReceived)
 	if mes.Duplicate == 1 {
 		transfer.lockAck.Lock()
-		defer transfer.lockAck.Unlock()
 		order := int(mes.Order)
 		transfer.orderMap[order] = 1
 		if int64(len(transfer.orderMap)) >= transfer.toBeReceived {
 			transfer.terminated = true
+			logf.info("send transfer ack: %v\n", mes)
 			f.sendBackStoreMessageToClient(mes, transfer)
-			return nil
 		}
-	} else {
-		if mes.Order%100 == 0 {
-			t0 := time.Now()
-			if t0.Sub(transfer.lastClientMes).Seconds() > 1 {
-				transfer.lastClientMes = t0
-				f.sendBackStoreMessageToClient(mes, transfer)
-			}
-		}
+		transfer.lockAck.Unlock()
 	}
 	return nil
 }
@@ -184,7 +174,8 @@ func (f *FileManager) storeBlock(mes *AntMes) error {
 	if err != nil {
 		logf.error("Error writting block order %d: %v\n", mes.Order, err)
 	}
-	f.gnode.senderManager.sendMessage(&AntMes{
+	//logf.info("storeBlock duplicate=%d order=%d (%d)\n", mes.Duplicate, mes.Order, len(f.testMap))
+	return f.gnode.senderManager.sendMessage(&AntMes{
 		Function:     "storeBlocAck",
 		Target:       mes.Origin,
 		TransferId:   mes.TransferId,
@@ -194,11 +185,12 @@ func (f *FileManager) storeBlock(mes *AntMes) error {
 		UserName:     mes.UserName,
 		TargetedPath: mes.TargetedPath,
 	})
-	return nil
 }
 
 func (f *FileManager) writeBlock(mes *AntMes) error {
-	f.storeFileNodeInit(mes)
+	if err := f.storeFileNodeInit(mes); err != nil {
+		logf.error("storeFileINodeInit error: %v\n", err)
+	}
 	dir := f.getGNodeFilePath(mes.UserName, mes.TargetedPath, mes.Version, mes.Duplicate)
 	os.MkdirAll(dir, os.ModeDir)
 	name := f.getBlockName(mes.Order, mes.NbBlockTotal)
@@ -211,13 +203,14 @@ func (f *FileManager) writeBlock(mes *AntMes) error {
 
 func (f *FileManager) storeFileNodeInit(mes *AntMes) error {
 	dir := f.getGNodeFilePath(mes.UserName, mes.TargetedPath, mes.Version, mes.Duplicate)
+	//logf.info("storeFileNodeInit: %s\n", dir)
 	if _, err := os.Stat(path.Join(dir, "meta")); err == nil {
 		return nil
 	}
 	os.MkdirAll(dir, os.ModeDir)
 	dirParent := path.Dir(dir)
 	name := path.Base(mes.TargetedPath)
-	if err := ioutil.WriteFile(path.Join(dirParent, fmt.Sprintf("%s%s", name, GNodeFileOnGoing)), []byte("ongoing"), 0666); err != nil {
+	if err := ioutil.WriteFile(path.Join(dirParent, fmt.Sprintf("%s.%d%s", name, mes.Version, GNodeFileOnGoing)), []byte("ongoing"), 0666); err != nil {
 		return err
 	}
 	filed, err := os.Create(path.Join(dir, "meta"))
@@ -260,12 +253,11 @@ func (f *FileManager) formatOrder(order int64) string {
 }
 
 func (f *FileManager) commitFileStorage(mes *AntMes) error {
-	logf.info("received commitFileStorage from client, tf=%s\n", mes.TransferId)
-	f.commitedMap[mes.TransferId] = time.Now()
-	dir := path.Dir(path.Join(config.rootDataPath, mes.UserName, mes.TargetedPath))
+	//logf.info("received commitFileStorage from client, tf=%s\n", mes.TransferId)
+	dir := path.Dir(f.getGNodeFilePath(mes.UserName, mes.TargetedPath, mes.Version, mes.Duplicate))
 	name := path.Base(mes.TargetedPath)
 	f.transferMap.del(mes.TransferId)
-	os.Remove(path.Join(dir, fmt.Sprintf("%s%s", name, GNodeFileOnGoing)))
+	os.Remove(path.Join(dir, fmt.Sprintf("%s.%d%s", name, mes.Version, GNodeFileOnGoing)))
 	return nil
 }
 
@@ -428,7 +420,7 @@ func (f *FileManager) getLastVersion(userName string, filePath string, version i
 		if strings.HasPrefix(file.Name(), filePath) {
 			//logf.info("found %s\n", file.Name())
 			version, err := f.extractDataFromGNodeFileName(file.Name())
-			logf.info("version=%d", version)
+			//logf.info("version=%d", version)
 			if err == nil && lastVersion < version {
 				lastVersion = version
 			}

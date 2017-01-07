@@ -49,23 +49,15 @@ func (m *SenderManager) sendMessage(mes *AntMes) error {
 	m.usage++
 	if mes.Id == "" {
 		mes.Id = m.gnode.getNewId(true)
-		if mes.Origin == "" {
-			mes.Origin = m.gnode.name
-		}
 	}
-	return m.sender.sendMessage(mes)
+	if mes.Origin == "" {
+		mes.Origin = m.gnode.name
+	}
+	if err := m.sender.sendMessage(mes); err != nil {
+		logf.error("send message error: %s: %v\n", mes.toString(), err)
+	}
 	//logf.info("send message: %s\n", mes.toString())
-	/*
-		if m.nbSender <= 0 {
-			m.sender.sendMessage(mes)
-			return true
-		}
-		for {
-		if !m.buffer.put(mes) {
-			return false
-		}
-		return true
-	*/
+	return nil
 }
 
 func (m *SenderManager) sendMessageReturnAnswer(mes *AntMes, timeoutSecond int) (*AntMes, error) {

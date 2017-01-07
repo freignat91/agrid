@@ -4,6 +4,7 @@ package gnode;
 
 service GNodeService {
         rpc ExecuteFunction (AntMes) returns (AntRet);
+        rpc CheckReceiver (HealthRequest) returns (AntRet);
         rpc GetClientStream (stream AntMes) returns (stream AntMes) {}
         rpc AskConnection (AskConnectionRequest) returns (PingRet) {}
         rpc Ping (AntMes) returns (PingRet) {}

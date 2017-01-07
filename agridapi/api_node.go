@@ -110,7 +110,7 @@ func (api *AgridAPI) NodeLs() ([]string, error) {
 			nodeMap[nodeName] = 1
 		}
 		nbOk++
-		if len(nodeMap) > 0 && nbOk == len(nodeMap) {
+		if len(nodeMap) > 0 && nbOk >= len(nodeMap) {
 			break
 		}
 	}
