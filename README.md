@@ -258,12 +258,16 @@ List the node of the cluster
 ### func (api *AgridAPI) CreateFile(name string, key string) *AFile, error
 
 Create a new file on cluster and return an AFile instance
-if key != "", encrypte the data with the key (AES256)
+Argument:
+ - key: if key != "", encrypte the data with the key (AES256)
 
-### func (api *AgridAPI) OpenFile(name string, key string) *AFile, error
+### func (api *AgridAPI) OpenFile(name string, verison int, key string) *AFile, error
 
 Open an existing file on cluster, move the current position to the end of file and return an AFile instance
-if key != "", encrypte the data with the key (AES256)
+Arguments:
+- version: file version to retrieve, if 0, retrieve the last version
+- key: if key != "", encrypte the data with the key (AES256)
+
 
 ## Functions on AFile (experimental part)
 

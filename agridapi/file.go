@@ -41,20 +41,21 @@ func (api *AgridAPI) CreateFile(name string, key string) (*AFile, error) {
 	if exist {
 		af.version = stat.Version
 	}
+	af.version++
 	af.client = cli
 	af.isCreated = true
-	api.info("Create file %s\n", af.name)
+	api.info("Create file %s version=%d\n", af.name, af.version)
 	return &af, nil
 }
 
-func (api *AgridAPI) OpenFile(name string, key string) (*AFile, error) {
+func (api *AgridAPI) OpenFile(name string, version int, key string) (*AFile, error) {
 	af := AFile{}
 	af.init(api, name, key)
 	cli, err := api.getClient()
 	if err != nil {
 		return nil, err
 	}
-	if stat, exist, err := api.getFileStat(cli, name, 0, false); err != nil {
+	if stat, exist, err := api.getFileStat(cli, name, version, false); err != nil {
 		return nil, err
 	} else if !exist {
 		return nil, fmt.Errorf("File %s doesn't exist", name)
@@ -65,7 +66,7 @@ func (api *AgridAPI) OpenFile(name string, key string) (*AFile, error) {
 		af.nbTotalBlock = int(af.length/int64(gnode.GNodeBlockSize)) + 1
 	}
 	af.client = cli
-	api.info("Open file %s length=%d\n", af.name, af.length)
+	api.info("Open file %s version=%d length=%d\n", af.name, af.version, af.length)
 	return &af, nil
 }
 
@@ -290,6 +291,7 @@ func (af *AFile) loadBlocks(orderMin int, orderMax int) error {
 		TargetedPath: af.name,
 		Target:       "*",
 		Duplicate:    1,
+		Version:      int32(af.version),
 		UserName:     af.api.userName,
 		UserToken:    af.api.userToken,
 		Args:         []string{list},
@@ -378,6 +380,7 @@ func (af *AFile) saveBlocks() error {
 					Function:     "fileSaveBlock",
 					TargetedPath: af.name,
 					Target:       "",
+					Version:      int32(af.version),
 					Order:        int64(block.order),
 					NbBlockTotal: int64(af.nbTotalBlock),
 					UserName:     af.api.userName,
@@ -393,12 +396,14 @@ func (af *AFile) saveBlocks() error {
 	if nbSend == 0 {
 		return nil
 	}
+	af.api.info("Waiting cluster ack\n")
 	orderMap := make(map[int]byte)
 	for {
 		mes, err := af.client.getNextAnswer(3000)
 		if err != nil {
 			return err
 		}
+		af.api.info("Received ack order=%d\n", mes.Order)
 		order := int(mes.Order)
 		block := af.getBlock(order)
 		block.saved = true
@@ -409,6 +414,38 @@ func (af *AFile) saveBlocks() error {
 			break
 		}
 	}
+	af.api.info("cluster ack received\n")
+	af.api.info("send commit\n")
+	if _, err := af.client.sendMessage(&gnode.AntMes{
+		Function:     "fileNodeSaveCommit",
+		TargetedPath: af.name,
+		Target:       "*",
+		Version:      int32(af.version),
+		NbBlockTotal: int64(af.nbTotalBlock),
+		UserName:     af.api.userName,
+	}, false); err != nil {
+		return err
+	}
+	af.api.info("waiting commit ack\n")
+	nodeMap := make(map[string]byte)
+	nbOk := 0
+	for {
+		mes, err := af.client.getNextAnswer(3000)
+		if err != nil {
+			return err
+		}
+		if mes.Function == "fileNodeSaveCommitAck" {
+			for _, nodeName := range mes.Nodes {
+				nodeMap[nodeName] = 1
+			}
+			nbOk++
+			af.api.info("Receive node ack from %s: (%d/%d)\n", mes.Origin, nbOk, len(nodeMap))
+			if len(nodeMap) > 0 && nbOk >= len(nodeMap) {
+				break
+			}
+		}
+	}
+	af.api.info("blocks saved commited\n")
 	return nil
 }
 

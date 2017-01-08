@@ -41,6 +41,7 @@ func (m *ReceiverManager) loadFunctions() {
 	m.functionMap["fileSaveBlock"] = m.gnode.fileManager.fileSaveBlock
 	m.functionMap["fileNodeSaveBlock"] = m.gnode.fileManager.fileNodeSaveBlock
 	m.functionMap["fileSaveBlockReturnClient"] = m.gnode.fileManager.fileSaveBlockReturnClient
+	m.functionMap["fileNodeSaveCommit"] = m.gnode.fileManager.fileNodeSaveCommit
 	m.functionMap["fileLoadBlocks"] = m.gnode.fileManager.fileLoadBlocks
 	//node Functions
 	m.functionMap["ping"] = m.gnode.nodeFunctions.ping

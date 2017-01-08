@@ -36,12 +36,12 @@ type FileTransfer struct {
 	orderMap      map[int]byte
 	lockAck       sync.RWMutex
 	lastClientMes time.Time
-	terminated    bool
 	blockSize     int64
 	metadata      []string
 	userName      string
 	userToken     string
 	version       int
+	timer         *time.Timer
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------------
@@ -78,8 +78,27 @@ func (f *FileManager) storeFile(req *StoreFileRequest) (*StoreFileRet, error) {
 		version:       int(req.Version),
 	}
 	f.transferMap.set(req.TransferId, transfer)
+	transfer.timer = time.AfterFunc(time.Second*time.Duration(5), func() {
+		f.sendBlockAskingtoClient(transfer)
+	})
 	logf.info("storeFile received: req=%v\n", req)
 	return &StoreFileRet{}, nil
+}
+
+func (f *FileManager) sendBlockAskingtoClient(transfer *FileTransfer) {
+	transfer.lockAck.Lock()
+	args := []string{}
+	for order := 1; order <= int(transfer.toBeReceived); order++ {
+		if _, ok := transfer.orderMap[order]; !ok {
+			args = append(args, fmt.Sprintf("%d", order))
+		}
+	}
+	transfer.lockAck.Unlock()
+	f.gnode.sendBackClient(transfer.clientId, &AntMes{
+		Function:   "blockAsking",
+		TransferId: transfer.id,
+		Args:       args,
+	})
 }
 
 func (f *FileManager) receiveBlocFromClient(mes *AntMes) error {
@@ -95,6 +114,8 @@ func (f *FileManager) receiveBlocFromClient(mes *AntMes) error {
 		}
 	}
 	data := mes.Data
+	transfer.timer.Reset(time.Second * 20)
+	transfer.lastClientMes = time.Now()
 	for nn := 0; nn < config.nbDuplicate; nn++ {
 		block := &AntMes{
 			Target:       f.gnode.nodeNameList[pos],
@@ -103,16 +124,17 @@ func (f *FileManager) receiveBlocFromClient(mes *AntMes) error {
 			Order:        mes.Order,
 			NbBlock:      transfer.toBeReceived,
 			NbBlockTotal: transfer.nbBlockTotal,
-			Size:         mes.Size,
 			TargetedPath: transfer.path,
 			Version:      int32(transfer.version),
 			Duplicate:    int32(nn + 1),
 			Args:         transfer.metadata,
-			Data:         data,
 			UserName:     transfer.userName,
 			UserToken:    transfer.userToken,
 		}
-		//logf.info("Send client tf=%s order %d to %s\n", mes.TransferId, mes.Order, f.gnode.nodeNameList[pos])
+		//if mes.Eof { // for debug
+		//logf.info("ReceiveBlockFromClient: mes=%v\n", block)
+		//}
+		block.Data = data
 		f.gnode.senderManager.sendMessage(block)
 		pos++
 		if pos >= len(f.gnode.nodeNameList) {
@@ -140,7 +162,6 @@ func (f *FileManager) storeBlockAck(mes *AntMes) error {
 		order := int(mes.Order)
 		transfer.orderMap[order] = 1
 		if int64(len(transfer.orderMap)) >= transfer.toBeReceived {
-			transfer.terminated = true
 			logf.info("send transfer ack: %v\n", mes)
 			f.sendBackStoreMessageToClient(mes, transfer)
 		}
@@ -150,22 +171,12 @@ func (f *FileManager) storeBlockAck(mes *AntMes) error {
 }
 
 func (f *FileManager) sendBackStoreMessageToClient(mes *AntMes, transfer *FileTransfer) {
-	if transfer.terminated {
-		logf.info("All store block ack received. File store tf=%s done\n", transfer.id)
-		f.gnode.sendBackClient(transfer.clientId, &AntMes{
-			Function:   "FileSendAck",
-			TransferId: transfer.id,
-			Origin:     mes.Origin,
-		})
-		f.transferMap.del(transfer.id)
-	} else {
-		f.gnode.sendBackClient(transfer.clientId, &AntMes{
-			Function:   "FileSendOngoing",
-			TransferId: transfer.id,
-			NoBlocking: true,
-			Origin:     mes.Origin,
-		})
-	}
+	logf.info("All store block ack received. File store tf=%s done\n", transfer.id)
+	f.gnode.sendBackClient(transfer.clientId, &AntMes{
+		Function:   "FileSendAck",
+		TransferId: transfer.id,
+		Origin:     mes.Origin,
+	})
 }
 
 func (f *FileManager) storeBlock(mes *AntMes) error {
@@ -253,6 +264,11 @@ func (f *FileManager) formatOrder(order int64) string {
 }
 
 func (f *FileManager) commitFileStorage(mes *AntMes) error {
+	if !f.transferMap.exists(mes.TransferId) {
+		return fmt.Errorf("Received commitFileStorage on a not started transfert name=%s version=%s order=%d", mes.TargetedPath, mes.Version, mes.Order)
+	}
+	transfer := f.transferMap.get(mes.TransferId).(*FileTransfer)
+	transfer.timer.Stop()
 	//logf.info("received commitFileStorage from client, tf=%s\n", mes.TransferId)
 	dir := path.Dir(f.getGNodeFilePath(mes.UserName, mes.TargetedPath, mes.Version, mes.Duplicate))
 	name := path.Base(mes.TargetedPath)
@@ -701,6 +717,7 @@ func (f *FileManager) fileSaveBlock(mes *AntMes) error {
 			TargetedPath: mes.TargetedPath,
 			NbBlockTotal: mes.NbBlockTotal,
 			Duplicate:    int32(nn + 1),
+			Version:      mes.Version,
 			FromClient:   mes.FromClient,
 			UserName:     mes.UserName,
 			UserToken:    mes.UserToken,
@@ -722,24 +739,7 @@ func (f *FileManager) fileSaveBlock(mes *AntMes) error {
 }
 
 func (f *FileManager) fileNodeSaveBlock(mes *AntMes) error {
-	//logf.info("Received fileNodeSaveBlock file=%s order=%d\n", mes.TargetedPath, mes.Order)
-	for duplicate := 1; duplicate <= config.nbDuplicate; duplicate++ {
-		fileName := fmt.Sprintf("%s.%d%s", path.Join(f.gnode.dataPath, mes.UserName, mes.TargetedPath), mes.Duplicate, GNodeFileSuffixe)
-		fmt.Printf("fileName: %s\n", fileName)
-		files, _ := ioutil.ReadDir(fileName)
-		for _, fl := range files {
-			if fl.Name() != "meta" {
-				order, nbBlock, err := f.extractDataFromBlockName(fl.Name())
-				fmt.Printf("find file %s: %d-%d\n", fl.Name(), order, nbBlock)
-				if err == nil {
-					if nbBlock < int(mes.NbBlockTotal) {
-						fmt.Printf("rename %s -> %s\n", fl.Name(), f.getBlockName(int64(order), int64(mes.NbBlockTotal)))
-						os.Rename(path.Join(fileName, fl.Name()), path.Join(fileName, f.getBlockName(int64(order), int64(mes.NbBlockTotal))))
-					}
-				}
-			}
-		}
-	}
+	//logf.info("Received fileNodeSaveBlock file=%s version=%d order=%d\n", mes.TargetedPath, mes.Version, mes.Order)
 	if err := f.writeBlock(mes); err != nil {
 		return err
 	}
@@ -748,6 +748,7 @@ func (f *FileManager) fileNodeSaveBlock(mes *AntMes) error {
 		Function:     "fileSaveBlockReturnClient",
 		FromClient:   mes.FromClient,
 		TargetedPath: mes.TargetedPath,
+		Version:      mes.Version,
 		Order:        mes.Order,
 	})
 	return nil
@@ -759,6 +760,25 @@ func (f *FileManager) fileSaveBlockReturnClient(mes *AntMes) error {
 	return nil
 }
 
+func (f *FileManager) fileNodeSaveCommit(mes *AntMes) error {
+	for duplicate := 1; duplicate <= config.nbDuplicate; duplicate++ {
+		fileName := f.getGNodeFilePath(mes.UserName, mes.TargetedPath, mes.Version, int32(duplicate))
+		files, _ := ioutil.ReadDir(fileName)
+		for _, fl := range files {
+			_, nbBlock, err := f.extractDataFromBlockName(fl.Name())
+			if err == nil && nbBlock != int(mes.NbBlockTotal) {
+				os.Remove(path.Join(fileName, fl.Name()))
+			}
+		}
+	}
+	f.commitFileStorage(mes)
+	ans := f.gnode.createAnswer(mes, false)
+	ans.Nodes = f.gnode.nodeNameList
+	ans.Function = "fileNodeSaveCommitAck"
+	f.gnode.senderManager.sendMessage(ans)
+	return nil
+}
+
 //----------------------------------------------------------------------------------------------
 // direct file save block
 
@@ -767,7 +787,7 @@ func (f *FileManager) fileLoadBlocks(mes *AntMes) error {
 	if len(mes.Args) == 0 {
 		return nil
 	}
-	fileName := fmt.Sprintf("%s.%d%s", path.Join(f.gnode.dataPath, mes.UserName, mes.TargetedPath), mes.Duplicate, GNodeFileSuffixe)
+	fileName := f.getGNodeFilePath(mes.UserName, mes.TargetedPath, mes.Version, int32(mes.Duplicate))
 	blockList := mes.Args[0]
 	files, _ := ioutil.ReadDir(fileName)
 	nbSent := 0

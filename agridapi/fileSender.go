@@ -7,6 +7,7 @@ import (
 	"golang.org/x/net/context"
 	"io"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -81,7 +82,7 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 		transferId := fmt.Sprintf("%s-%d", tId, i)
 		transferIds = append(transferIds, transferId)
 		m.api.info("client %d tf=%s nbBlock=%d\n", i, transferId, nbBlock)
-		_, err := client.client.StoreFile(context.Background(), &gnode.StoreFileRequest{
+		req := &gnode.StoreFileRequest{
 			Name:         fileName,
 			Path:         target,
 			NbBlockTotal: totalBlock,
@@ -94,7 +95,8 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 			Version:      int32(version),
 			UserName:     m.api.userName,
 			UserToken:    m.api.userToken,
-		})
+		}
+		_, err := client.client.StoreFile(context.Background(), req)
 		if err != nil {
 			return 0, err
 		}
@@ -141,7 +143,12 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 			if err != nil {
 				return 0, err
 			}
-			okMap[mes.TransferId] = 1
+			if mes.Function == "blockAsking" {
+				m.api.info("ReSent %d blocks\n", len(mes.Args))
+				m.sendBlocks(f, block, client, transferIds[m.currentClient], mes.Args)
+			} else {
+				okMap[mes.TransferId] = 1
+			}
 		}
 		if len(okMap) >= nbThread {
 			break
@@ -161,6 +168,37 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 	}
 	m.api.info("Storage commited\n")
 	return version, nil
+}
+
+func (m *fileSender) sendBlocks(file *os.File, block *gnode.AntMes, client *gnodeClient, transferId string, list []string) error {
+	for _, sorder := range list {
+		order, err := strconv.ParseInt(sorder, 10, 64)
+		if err == nil {
+			block.Data = block.Data[:cap(block.Data)]
+			file.Seek((order-1)*int64(cap(block.Data)), 0)
+			n, err := file.Read(block.Data)
+			if err != nil {
+				return err
+			}
+			block.Data = block.Data[:n]
+			block.Order = order
+			block.Eof = true
+			if m.cipher != nil {
+				dat, err := m.cipher.encrypt(block.Data)
+				if err == nil {
+					block.Data = dat
+				} else {
+					block.Data = nil
+				}
+			}
+			if block.Data != nil {
+				block.TransferId = transferId
+				//m.api.info("send block order:%d\n", order)
+				client.sendMessage(block, false)
+			}
+		}
+	}
+	return nil
 }
 
 func (m *fileSender) close() {

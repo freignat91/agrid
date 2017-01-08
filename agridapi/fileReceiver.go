@@ -133,7 +133,7 @@ func (m *fileReceiver) retrieveFileThread(clusterFile string, thread int, nbThre
 					return
 				}
 			} else {
-				timeoutDelay = 1000
+				timeoutDelay = 3000
 				if session.nbBlock == 0 && mes.Order > 0 {
 					totalBlock = mes.NbBlock
 					session.nbBlock = int(totalBlock / int64(nbThread))
@@ -141,7 +141,7 @@ func (m *fileReceiver) retrieveFileThread(clusterFile string, thread int, nbThre
 						session.nbBlock++
 					}
 					m.api.info("Thread %d nbBlock to receive: %d/%d", thread, session.nbBlock, totalBlock)
-					if nbThread >= session.nbBlock && session.nbBlock > 0 {
+					if nbThread > session.nbBlock && session.nbBlock > 0 {
 						if thread == 0 || thread > session.nbBlock {
 							m.api.info("Thread %d not useful concidering the number of blocks\n", thread)
 							break
@@ -224,8 +224,11 @@ func (m *fileReceiver) receivedTimeout(session *receiveSession) bool {
 		session.blockListTry = 1
 	}
 	session.lastBlockList = blockList
-	//m.api.info("Thread %d recalls %d blocks duplicate=%d\n", session.thread, nn, session.currentDuplicate)
-	m.api.info("Thread %d recalls blocks duplicate=%d try=%d: %s\n", session.thread, session.currentDuplicate, session.blockListTry, blockList)
+	if nn > 10 {
+		m.api.info("Thread %d recalls %d blocks duplicate=%d\n", session.thread, nn, session.currentDuplicate)
+	} else {
+		m.api.info("Thread %d recalls blocks duplicate=%d try=%d: %s\n", session.thread, session.currentDuplicate, session.blockListTry, blockList)
+	}
 	session.req.Duplicate = int32(session.currentDuplicate)
 	session.req.BlockList = blockList
 	if _, err := session.client.client.RetrieveFile(context.Background(), session.req); err != nil {
