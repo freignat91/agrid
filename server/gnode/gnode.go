@@ -19,6 +19,10 @@ import (
 //TODO: utiliser targettedPath plutot que args[0] (nottament pour file rm)
 //TODO: mettre implicite le received local pour les target *
 //TODO: avoir un cancel global du transfer dsur transferId sur carch de noeud recepteru ou cancel client
+//TODO: pouvoir monitorer les transferts
+//TODO: pouvoir ecouter pour savoir quand un fichier d'un type donner est arrivé
+//TODO: ajouter des proccedures de fin de transfert avec variables evaluées
+//TODO: pouvoir connecter deux services agrid entre eux avec une policy de duplication des fichier entre eux et un monitoring de bout en bout
 
 var (
 	config GNodeConfig     = GNodeConfig{}

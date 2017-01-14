@@ -2,10 +2,8 @@ package tests
 
 import (
 	"github.com/freignat91/agrid/agridapi"
-	//"io/ioutil"
 	"os"
 	"testing"
-	//"time"
 )
 
 const (
@@ -44,7 +42,6 @@ func TestFileCreate(t *testing.T) {
 	if err := file.Sync(); err != nil {
 		t.Fatalf("file.Sync error: %v\n", err)
 	}
-	//file.Display()
 	if err := file.Close(); err != nil {
 		t.Fatalf("file.Close error: %v\n", err)
 	}
@@ -55,15 +52,12 @@ func TestFileCreate(t *testing.T) {
 	if _, err := file2.WriteString("essai de text5\n"); err != nil {
 		t.Fatalf("file.Write error: %v\n", err)
 	}
-	file.Display()
 	if err := file2.Close(); err != nil {
 		t.Fatalf("file.Close error: %v\n", err)
 	}
-	/*
-		if err := api.FileRm("/test", 0, true); err != nil {
-			t.Fatalf("FileRm error: %v\n", err)
-		}
-	*/
+	if err := api.FileRm("/test", 0, true); err != nil {
+		t.Fatalf("FileRm error: %v\n", err)
+	}
 }
 
 /*

@@ -4,9 +4,9 @@ Agrid v0.1.4 experimental
 
 # Purpose
 
-Agrid is a high available file storage design to be easy to use and scale. Agrid can handle from 1 to several hundred storage nodes. Each file are cut and spread on nodes to be stored.
+Agrid is a high available file storage service. Agrid can handle from 1 to several hundred storage nodes. Each file are cut and spread on nodes to be stored on high available way. Files can be saved with associated metadata and retrieve with their metadata.
 
-Agrid provide a CLI to store and retrieve files and a Go API, this one allows also direct file manipulations create/open, read/write, seek, close,...
+Clients can use Command line interface (CLI) or Go API to store and retrieve files, the Go API allows also direct file manipulations create/open, read/write, seek, close, on the cluster
 
 Agrid is a docker service. It enough to pull its image `freignat91/agrid:latest` or build it using `make build` and create the docker service to use it on a swarm cluster. It can be scaled using docker service scale command.
 

@@ -37,7 +37,7 @@ func (cfg *GNodeConfig) setDefault() {
 	cfg.restPort = "3000"
 	cfg.grpcPort = "30103"
 	cfg.udpPort = "3010"
-	cfg.bufferSize = 10000
+	cfg.bufferSize = 10
 	cfg.parallelReceiver = 100
 	cfg.parallelSender = 100
 	cfg.nbDuplicate = 3

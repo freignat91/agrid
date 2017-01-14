@@ -143,10 +143,11 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 			if err != nil {
 				return 0, err
 			}
+			//m.api.info(" waiting cluster ack received: %v\n", mes)
 			if mes.Function == "blockAsking" {
 				m.api.info("ReSent %d blocks\n", len(mes.Args))
 				m.sendBlocks(f, block, client, transferIds[m.currentClient], mes.Args)
-			} else {
+			} else if mes.Function == "FileStoreAck" {
 				okMap[mes.TransferId] = 1
 			}
 		}
@@ -164,7 +165,25 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 			TargetedPath: target,
 			Version:      int32(version),
 			TransferId:   transferIds[m.currentClient],
+			FromClient:   client.id,
 		}, false)
+	}
+	m.api.info("Waiting for cluster commit ack\n")
+	okMap = make(map[string]byte)
+	for {
+		for _, client := range m.clients {
+			mes, err := client.getNextAnswer(120000)
+			if err != nil {
+				return 0, err
+			}
+			//m.api.info(" waiting commit ack received: %v\n", mes)
+			if mes.Function == "FileCommitAck" {
+				okMap[mes.TransferId] = 1
+			}
+		}
+		if len(okMap) >= nbThread {
+			break
+		}
 	}
 	m.api.info("Storage commited\n")
 	return version, nil
