@@ -36,19 +36,22 @@ Agrid use Ant like behavior to found the shortest path between two nodes. The pa
 
 # Install
 
+Docker 1.12.3 min should be installed
+pull this image or rebuild it:
 
-- Docker 1.12.3 min should be installed 
-- clone this project
-- execute `make install` to build the agrid command line executable
-- execute `make build` to create a image freignat91/agrid:latest, if needed, or docker pull freignat/agrid:latest from dockerhub
-- start the service: `make start` to create a service agrid using 3 nodes (update Makafile or execute directly the "docker service create" command to change the number of nodes or orher parameters)
+- clone the git project: https://github.com/freignat91/agrid
+- execute make install to build the agrid command line executable
+- execute make build to create a image freignat91/agrid:latest
 
-for instance with 5 nodes, using a publish port 30103 and network aNetwork
+agrid can't be used as a single container, it needs to be started as a service;
+
+For instance with 5 nodes, using a publish port 30103 and network aNetwork
+[dataPath] should exist on the host, it contains all the data saved by agrid
 
 ```
-docker service create --network aNetwork --name agrid \
+        docker service create --network aNetwork --name agrid \
         --publish 30103:30103 \
-        --mount type=bind,source=/home/freignat/data,target=/data \
+        --mount type=bind,source=[dataPath],target=/data \
         --replicas=5 \
         freignat91/agrid:latest
 ```
