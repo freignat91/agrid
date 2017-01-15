@@ -570,7 +570,7 @@ func (f *FileManager) listFolder(mes *AntMes, pathname string, order int, args [
 	for _, fl := range files {
 		name := path.Join(pathname, fl.Name())
 		if strings.HasSuffix(name, GNodeFileSuffixe) {
-			line := fl.ModTime().Format("2006-01-02 15:04:05") + " " + f.getTrueName(name, version)[len(f.gnode.dataPath)+len(mes.UserName):]
+			line := f.getTrueName(name, version)[len(f.gnode.dataPath)+len(mes.UserName):]
 			args = append(args, line)
 			if len(args) >= 100 {
 				order++

@@ -78,7 +78,7 @@ func (m *monitorDisplayer) displayTransferEvent(event *agridapi.TransferEvent) e
 	fmt.Println("\033[0;0H")
 	fmt.Fprintf(m.writer, "Date\tTransfertId\tStatus\tType\tFile\tMetadata\n")
 	for _, evt := range m.lines {
-		fmt.Fprintf(m.writer, "%s\t%s\t%s\t%s\t%s\t%v\n", evt.EventDate, evt.TransferId, evt.State, evt.FileType, evt.FileName, evt.Metadata)
+		fmt.Fprintf(m.writer, "%s\t%s\t%s\t%s\t%s\t%v                            \n", evt.EventDate, evt.TransferId, evt.State, evt.FileType, evt.FileName, evt.Metadata)
 	}
 	m.writer.Flush()
 	return nil
