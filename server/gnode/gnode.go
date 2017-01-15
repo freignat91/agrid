@@ -290,7 +290,7 @@ func (g *GNode) sendBackClient(clientId string, mes *AntMes) {
 	}
 	//logf.info("sendBackClient eff tf=%s order=%d\n", mes.TransferId, mes.Order)
 	if err := client.stream.Send(mes); err != nil {
-		logf.error("Error trying to send message to client %s: mes=%s: %s\n", clientId, mes.toString(), err)
+		logf.error("Error trying to send message to client %s: mes=%s: %v\n", clientId, mes.toString(), err)
 	}
 }
 
@@ -367,7 +367,7 @@ func (g *GNode) removeUser(userName string, token string, force bool) error {
 
 func (g *GNode) loadUser() error {
 	g.userMap = make(map[string]string)
-	fileList, err := ioutil.ReadDir(config.rootDataPath)
+	fileList, err := ioutil.ReadDir(path.Join(config.rootDataPath, "users"))
 	if err != nil {
 		return err
 	}
@@ -378,7 +378,7 @@ func (g *GNode) loadUser() error {
 }
 
 func (g *GNode) loadOneUser(name string) {
-	data, err := ioutil.ReadFile(path.Join(config.rootDataPath, name, "token"))
+	data, err := ioutil.ReadFile(path.Join(config.rootDataPath, "users", name, "token"))
 	if err != nil {
 		logf.error("loadOneUser user=%s: %v\n", name, err)
 		return

@@ -82,14 +82,16 @@ func (f *FileManager) storeFile(req *StoreFileRequest) (*StoreFileRet, error) {
 	transfer.timer = time.AfterFunc(time.Second*time.Duration(5), func() {
 		f.sendBlockAskingtoClient(transfer)
 	})
-	f.gnode.senderManager.sendMessage(&AntMes{
+	event := &AntMes{
 		Target:       "*",
 		Function:     "sendBackEvent",
 		FileType:     "", //TODO
 		TargetedPath: req.Path,
 		UserName:     req.UserName,
 		Args:         []string{"TransferEvent", time.Now().Format("2006-01-02 15:04:05"), transfer.id, "Started"},
-	})
+	}
+	f.gnode.senderManager.sendMessage(event)
+	f.gnode.receiverManager.receiveMessage(event)
 	logf.info("storeFile received: req=%v\n", req)
 	return &StoreFileRet{}, nil
 }
@@ -181,7 +183,6 @@ func (f *FileManager) storeBlockAck(mes *AntMes) error {
 	}
 	//logf.info("ack: orderMap=%d finalOrderMap=%d\n", len(transfer.orderMap), len(transfer.finalOrderMap))
 	if int64(len(transfer.finalOrderMap)) >= transfer.toBeReceived {
-		logf.info("send transfer ack: %v\n", mes)
 		f.sendBackStoreMessageToClient(mes, transfer)
 	}
 	transfer.lockAck.Unlock()
@@ -291,14 +292,16 @@ func (f *FileManager) commitFileStorage(mes *AntMes) error {
 		for _, meta := range transfer.metadata {
 			args = append(args, meta)
 		}
-		f.gnode.senderManager.sendMessage(&AntMes{
+		event := &AntMes{
 			Target:       "*",
 			Function:     "sendBackEvent",
 			FileType:     "", //TODO
 			TargetedPath: transfer.path,
 			UserName:     transfer.userName,
 			Args:         args,
-		})
+		}
+		f.gnode.senderManager.sendMessage(event)
+		f.gnode.receiverManager.receiveMessage(event)
 	}
 	logf.info("received commitFileStorage from client, tf=%s\n", mes.TransferId)
 	for duplicate := 1; duplicate <= config.nbDuplicate; duplicate++ {
