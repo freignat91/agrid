@@ -51,6 +51,8 @@ func (m *ReceiverManager) loadFunctions() {
 	m.functionMap["createNodeUser"] = m.gnode.nodeFunctions.createNodeUser
 	m.functionMap["removeUser"] = m.gnode.nodeFunctions.removeUser
 	m.functionMap["removeNodeUser"] = m.gnode.nodeFunctions.removeNodeUser
+	//gnode Function
+	m.functionMap["sendBackEvent"] = m.gnode.sendBackEvent
 }
 
 func (m *ReceiverManager) start(gnode *GNode, bufferSize int, maxGoRoutine int) {
@@ -150,28 +152,36 @@ func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamS
 		if err == io.EOF {
 			logf.error("Client reader %s: EOF\n", clientName)
 			m.gnode.clientMap.del(clientName)
+			m.gnode.removeEventListener(clientName)
 			m.gnode.nodeFunctions.forceGC()
 			return
 		}
 		if err != nil {
 			logf.error("Client reader %s: Failed to receive message: %v\n", clientName, err)
 			m.gnode.clientMap.del(clientName)
+			m.gnode.removeEventListener(clientName)
 			m.gnode.nodeFunctions.forceGC()
 			return
 		}
-		mes.Id = m.gnode.getNewId(false)
-		mes.Origin = m.gnode.name
-		mes.FromClient = clientName
-		m.gnode.idMap.Add(mes.Id)
-		if mes.Debug {
-			logf.debugMes(mes, "-------------------------------------------------------------------------------------------------------------\n")
-			logf.debugMes(mes, "Receive mes from client %s : %v\n", clientName, mes)
-		}
-		for {
-			if m.gnode.receiverManager.receiveMessage(mes) {
-				break
+		if mes.Function == "setEventListener" {
+			if m.gnode.checkUser(mes.UserName, mes.UserToken) {
+				m.gnode.setEventListener("TransferEvent", mes.UserName, clientName)
 			}
-			time.Sleep(1 * time.Second)
+		} else {
+			mes.Id = m.gnode.getNewId(false)
+			mes.Origin = m.gnode.name
+			mes.FromClient = clientName
+			m.gnode.idMap.Add(mes.Id)
+			if mes.Debug {
+				logf.debugMes(mes, "-------------------------------------------------------------------------------------------------------------\n")
+				logf.debugMes(mes, "Receive mes from client %s : %v\n", clientName, mes)
+			}
+			for {
+				if m.gnode.receiverManager.receiveMessage(mes) {
+					break
+				}
+				time.Sleep(1 * time.Second)
+			}
 		}
 	}
 }

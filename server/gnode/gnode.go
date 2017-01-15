@@ -58,6 +58,7 @@ type GNode struct {
 	nodeFunctions     *nodeFunctions
 	userMap           map[string]string
 	availableNodeList []string
+	eventListenerMap  map[string]*gnodeListener
 }
 
 type gnodeTarget struct {
@@ -106,6 +107,7 @@ func (g *GNode) init() {
 	//g.clientMap = make(map[string]*gnodeClient)
 	g.clientMap.init()
 	g.targetMap = make(map[string]*gnodeTarget)
+	g.initEventListener()
 	g.nbNode = config.nbNode
 	g.dataPath = config.rootDataPath
 	g.loadUser()

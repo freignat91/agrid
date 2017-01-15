@@ -82,6 +82,14 @@ func (f *FileManager) storeFile(req *StoreFileRequest) (*StoreFileRet, error) {
 	transfer.timer = time.AfterFunc(time.Second*time.Duration(5), func() {
 		f.sendBlockAskingtoClient(transfer)
 	})
+	f.gnode.senderManager.sendMessage(&AntMes{
+		Target:       "*",
+		Function:     "sendBackEvent",
+		FileType:     "", //TODO
+		TargetedPath: req.Path,
+		UserName:     req.UserName,
+		Args:         []string{"TransferEvent", time.Now().Format("2006-01-02 15:04:05"), transfer.id, "Started"},
+	})
 	logf.info("storeFile received: req=%v\n", req)
 	return &StoreFileRet{}, nil
 }
@@ -171,7 +179,7 @@ func (f *FileManager) storeBlockAck(mes *AntMes) error {
 			transfer.finalOrderMap[order] = 1
 		}
 	}
-	logf.info("ack: orderMap=%d finalOrderMap=%d\n", len(transfer.orderMap), len(transfer.finalOrderMap))
+	//logf.info("ack: orderMap=%d finalOrderMap=%d\n", len(transfer.orderMap), len(transfer.finalOrderMap))
 	if int64(len(transfer.finalOrderMap)) >= transfer.toBeReceived {
 		logf.info("send transfer ack: %v\n", mes)
 		f.sendBackStoreMessageToClient(mes, transfer)
@@ -279,6 +287,18 @@ func (f *FileManager) commitFileStorage(mes *AntMes) error {
 		transfer := f.transferMap.get(mes.TransferId).(*FileTransfer)
 		transfer.timer.Stop()
 		f.transferMap.del(mes.TransferId)
+		args := []string{"TransferEvent", time.Now().Format("2006-01-02 15:04:05"), transfer.id, "Ended"}
+		for _, meta := range transfer.metadata {
+			args = append(args, meta)
+		}
+		f.gnode.senderManager.sendMessage(&AntMes{
+			Target:       "*",
+			Function:     "sendBackEvent",
+			FileType:     "", //TODO
+			TargetedPath: transfer.path,
+			UserName:     transfer.userName,
+			Args:         args,
+		})
 	}
 	logf.info("received commitFileStorage from client, tf=%s\n", mes.TransferId)
 	for duplicate := 1; duplicate <= config.nbDuplicate; duplicate++ {
@@ -324,7 +344,7 @@ func (f *FileManager) removeNodeFiles(mes *AntMes) error {
 	if len(mes.Args) >= 2 && mes.Args[1] == "true" {
 		recursive = true
 	}
-	fullName := path.Join(f.gnode.dataPath, mes.UserName, filename)
+	fullName := path.Join(f.gnode.dataPath, "users", mes.UserName, filename)
 	//logf.info("fuleName: %s\n", fullName)
 	if _, err := os.Stat(fullName); err == nil {
 		//logf.info("does exist: %s\n", fullName)
@@ -547,7 +567,7 @@ func (f *FileManager) listFolder(mes *AntMes, pathname string, order int, args [
 	for _, fl := range files {
 		name := path.Join(pathname, fl.Name())
 		if strings.HasSuffix(name, GNodeFileSuffixe) {
-			line := f.getTrueName(name, version)[len(f.gnode.dataPath)+len(mes.UserName):]
+			line := fl.ModTime().Format("2006-01-02 15:04:05") + " " + f.getTrueName(name, version)[len(f.gnode.dataPath)+len(mes.UserName):]
 			args = append(args, line)
 			if len(args) >= 100 {
 				order++

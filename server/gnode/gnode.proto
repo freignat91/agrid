@@ -45,7 +45,8 @@ message AntMes {
         string user_name = 29;
         string user_token = 30;
         repeated string nodes = 31;
-        bytes data = 32;
+        string fileType = 32;
+        bytes data = 33;
 }
 
 message AntRet{

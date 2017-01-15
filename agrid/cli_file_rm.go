@@ -23,7 +23,7 @@ func init() {
 	FileCmd.AddCommand(FileRmCmd)
 	FileRmCmd.Flags().BoolP("recursive", "r", false, `remomve all files under a directory`)
 	FileRmCmd.Flags().String("user", "", `set user name`)
-	FileRmCmd.Flags().String("version", "", `to remove a specific version only`)
+	FileRmCmd.Flags().String("version", "0", `to remove a specific version only`)
 }
 
 func (m *agridCLI) fileRemove(cmd *cobra.Command, args []string) error {

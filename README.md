@@ -1,12 +1,14 @@
 # AGRID
 
-Agrid v0.1.4 experimental
+Agrid v0.1.4
 
 # Purpose
 
 Agrid is a high available file storage service. Agrid can handle from 1 to several hundred storage nodes. Each file are cut and spread on nodes to be stored on high available way. Files can be saved with associated metadata and retrieve with their metadata.
 
 Clients can use Command line interface (CLI) or Go API to store and retrieve files, the Go API allows also direct file manipulations create/open, read/write, seek, close, on the cluster
+
+Clients can monitor file transfers on a separated process
 
 Agrid is a docker service. It enough to pull its image `freignat91/agrid:latest` or build it using `make build` and create the docker service to use it on a swarm cluster. It can be scaled using docker service scale command.
 
@@ -151,6 +153,14 @@ Retrieve a file from cluster using duplicated blocks if some are missing
 - <--user userName:token>: to store on the usee file space, token is given at user creation
 - <--version nn> remove a specific version of the file, default: remove all the versions
 
+
+### monitor file transfer
+
+`agrid file monitor <--type> <--user>`
+- <--user userName:token>: to store on the usee file space, token is given at user creation
+- <--type xx> monitor only the file transfer with type=xx
+
+
 ### list the cluster nodes
 
 `agrid node ls`
@@ -230,6 +240,14 @@ Arguments:
 - recusive: if true remove all files under the clusterPathname
 - version: to remove a specifiv version, default: all versions are removed
 
+### func (api *AgridAPI) FileSetTransferEventCallback(fileType string, callbackFunction interface{}) error 
+
+Set a function callback executed at each TransferEvent
+Arguments:
+- fileType: callback only the transfer of files having type "fileType"
+- callbackFunction: function executed at each TransfertEvent, should have type: func(*AgridAPI.TransferEvent) error
+
+
 ### func (api *AgridAPI) NodePing(node string, debugTrace bool) (string, error)
 
 Ping a node
@@ -250,6 +268,10 @@ Set the logLevel on a node(s)
 Arguments:
 - node: targetted node
 - logLevel: error, warn, info, debug
+
+### func (api *AgridAPI) NodeLs() ([]string, error)
+
+List the node of the cluster
 
 ### func (api *AgridAPI) NodeLs() ([]string, error)
 
