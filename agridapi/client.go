@@ -156,6 +156,9 @@ func (g *gnodeClient) getNextAnswer(timeout int) (*gnode.AntMes, error) {
 		return mes, nil
 	}
 	mes := <-g.recvChan
+	if mes.ErrorMes != "" {
+		return nil, fmt.Errorf("Error: %s", mes.ErrorMes)
+	}
 	return mes, nil
 }
 

@@ -38,7 +38,6 @@ func (api *AgridAPI) FileSetTransferEventCallback(fileType string, callbackFunct
 			api.info("received error%v\n", mes)
 			return err
 		}
-		api.info("received %v\n", mes)
 		if mes.Function == "sendBackEvent" && mes.Args[0] == "TransferEvent" && (fileType == "" || mes.FileType == fileType) {
 			event := &TransferEvent{
 				EventType:  mes.Args[0],

@@ -168,9 +168,10 @@ func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamS
 				m.gnode.setEventListener("TransferEvent", mes.UserName, clientName)
 			} else {
 				logf.error("setEventListener error user")
-				answer := m.gnode.createAnswer(mes, false)
-				answer.ErrorMes = "Invalid User/token"
-				stream.Send(answer)
+				stream.Send(&AntMes{
+					Function: "setEventListener",
+					ErrorMes: "Invalid User/token",
+				})
 			}
 		} else {
 			mes.Id = m.gnode.getNewId(false)
