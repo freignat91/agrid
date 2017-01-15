@@ -102,6 +102,8 @@ func (g *GNode) Start(version string, build string) error {
 }
 
 func (g *GNode) init() {
+	os.MkdirAll(path.Join(config.rootDataPath, "users"), 0666)
+	os.MkdirAll(path.Join(config.rootDataPath, "tmp"), 0666)
 	g.lockId = sync.RWMutex{}
 	g.traceMap = make(map[string]*gnodeTrace)
 	//g.clientMap = make(map[string]*gnodeClient)
@@ -319,13 +321,13 @@ func (g *GNode) getToken() string {
 
 func (g *GNode) createUser(userName string, token string) error {
 	logf.info("Create user %s\n", userName)
-	_, err := ioutil.ReadDir(path.Join(config.rootDataPath, userName))
+	_, err := ioutil.ReadDir(path.Join(config.rootDataPath, "users", userName))
 	if err == nil {
 		g.loadOneUser(userName)
 		return fmt.Errorf("User %s : already exist", userName)
 	}
-	os.MkdirAll(path.Join(config.rootDataPath, userName), os.ModeDir)
-	file, errc := os.Create(path.Join(config.rootDataPath, userName, "token"))
+	os.MkdirAll(path.Join(config.rootDataPath, "users", userName), os.ModeDir)
+	file, errc := os.Create(path.Join(config.rootDataPath, "users", userName, "token"))
 	if errc != nil {
 		return errc
 	}
@@ -343,7 +345,7 @@ func (g *GNode) removeUser(userName string, token string, force bool) error {
 		return fmt.Errorf("Invalid user/token")
 	}
 	logf.warn("Remove user %s force mode=%t\n", userName, force)
-	dir := path.Join(config.rootDataPath)
+	dir := path.Join(config.rootDataPath, "users")
 	fileList, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return err

@@ -36,7 +36,7 @@ Agrid use Ant like behavior to found the shortest path between two nodes. The pa
 
 # Install
 
-Docker 1.12.3 min should be installed
+Docker 1.12.5 min should be installed
 pull this image or rebuild it:
 
 - clone the git project: https://github.com/freignat91/agrid
