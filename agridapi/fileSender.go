@@ -37,8 +37,8 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 	}
 	length := st.Size()
 	md5 := md5.New()
-	io.WriteString(md5, fileName)
-	tId := fmt.Sprintf("TF-%x-%d", md5.Sum(nil), time.Now().UnixNano())
+	io.WriteString(md5, target)
+	tId := fmt.Sprintf("TF-%x-%d", md5.Sum(nil), time.Now().Unix())
 	blockSize := int64(gnode.GNodeBlockSize)
 	totalBlock := length / blockSize
 	if length%blockSize > 0 {
