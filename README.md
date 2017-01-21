@@ -20,6 +20,7 @@ Agrid use Ant like behavior to found the shortest path between two nodes. The pa
 - ./docs/Agrid-Ant-net.pptx
 
 
+
 # Configuration using System Variables:
 
 
@@ -113,13 +114,13 @@ Remove a user. All files in its file space should have been removed first
 - [user] the user to remove, format userName:token
 - <--force> if this option exist then the user is removed with all its associated files, if not the user is removed only if its file space is empty.
 
-### store a new verison of a file on cluster:
+### store a new version of a file on cluster:
 
 `agrid file store [source] [target] <--thread> <--key> <--user>`
 - [source]: the full pathname of the local file to store
-- [target]: the full pathname of the file in the cluster
-- <--thread number>: optionally: number of threads used to store the file (default 1), each thread open a grpc connection on a distinct 
-node and handle a part of the file (all the block n if n%nbThread==threadNumber)
+- [target]: the full pathname of the file in the cluster*
+- <--type xxx> set the file type
+- <--thread number>: optionally: number of threads used to store the file (default 1), each thread open a grpc connection on a distinct node and handle a part of the file (all the block n if n%nbThread==threadNumber)
 - <--key>: optionally: AES key to encrypt the file
 - <--user userName:token>: to store on the usee file space, token is given at token creation
 - <--meta key1=value1,key2=value2, ...>
@@ -280,13 +281,13 @@ List the node of the cluster
 
 List the node of the cluster
 
-### func (api *AgridAPI) CreateFile(name string, key string) *AFile, error
+### func (api *AgridAPI) CreateFile(name string, meta map[string]map, key string) *AFile, error
 
 Create a new file on cluster and return an AFile instance
 Argument:
  - key: if key != "", encrypte the data with the key (AES256)
 
-### func (api *AgridAPI) OpenFile(name string, verison int, key string) *AFile, error
+### func (api *AgridAPI) OpenFile(name string, version int, key string) *AFile, error
 
 Open an existing file on cluster, move the current position to the end of file and return an AFile instance
 Arguments:
@@ -326,6 +327,10 @@ Move the current possition to 'pos', relative to whence:
 - 0: from the begining of the file
 - 1: from the current position
 - 2: from the end of the file
+
+### func (a *AFile) getMetadata() map[string]string
+
+return the metadata map. This map can be updated to in order to be stored with the file.
 
 ### func (a *AFile) Sync() error
 
