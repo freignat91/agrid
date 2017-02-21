@@ -30,7 +30,7 @@ func (api *AgridAPI) FileSetTransferEventCallback(fileType string, callbackFunct
 		Function:  "setEventListener",
 		UserName:  api.userName,
 		UserToken: api.userToken,
-		Args:      []string{"TransferEvent"},
+		Args:      []string{"TransferEvent", fileType},
 	}, false)
 	for {
 		mes, err := client.getNextAnswer(0)
@@ -38,7 +38,7 @@ func (api *AgridAPI) FileSetTransferEventCallback(fileType string, callbackFunct
 			api.info("received error%v\n", mes)
 			return err
 		}
-		if mes.Function == "sendBackEvent" && mes.Args[0] == "TransferEvent" && (fileType == "" || mes.FileType == fileType) {
+		if mes.Function == "sendBackEvent" && mes.Args[0] == "TransferEvent" && (fileType == "" || mes.Args[4] == fileType) {
 			event := &TransferEvent{
 				EventType:  mes.Args[0],
 				EventDate:  mes.Args[1],
@@ -46,8 +46,8 @@ func (api *AgridAPI) FileSetTransferEventCallback(fileType string, callbackFunct
 				State:      mes.Args[3],
 				UserName:   mes.UserName,
 				FileName:   mes.TargetedPath,
-				FileType:   mes.FileType,
-				Metadata:   mes.Args[4:],
+				FileType:   mes.Args[4],
+				Metadata:   mes.Args[5:],
 			}
 			ret := f.Call([]reflect.Value{reflect.ValueOf(event)})
 			if ret[0].Interface() != nil {

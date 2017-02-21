@@ -38,6 +38,7 @@ type FileTransfer struct {
 	lastClientMes time.Time
 	blockSize     int64
 	metadata      []string
+	fileType      string
 	userName      string
 	userToken     string
 	version       int
@@ -60,6 +61,13 @@ func (f *FileManager) storeFile(req *StoreFileRequest) (*StoreFileRet, error) {
 	if !f.gnode.checkUser(req.UserName, req.UserToken) {
 		return nil, fmt.Errorf("Invalid user/token")
 	}
+	fileType := ""
+	for _, val := range req.Metadata {
+		if strings.HasPrefix(val, "type=") {
+			fileType = strings.Split(val, "=")[1]
+			break
+		}
+	}
 	f.transferNumber++
 	transfer := &FileTransfer{
 		clientId:      req.ClientId,
@@ -74,6 +82,7 @@ func (f *FileManager) storeFile(req *StoreFileRequest) (*StoreFileRet, error) {
 		lockAck:       sync.RWMutex{},
 		lastClientMes: time.Now(),
 		metadata:      req.Metadata,
+		fileType:      fileType,
 		userName:      req.UserName,
 		userToken:     req.UserToken,
 		version:       int(req.Version),
@@ -85,10 +94,9 @@ func (f *FileManager) storeFile(req *StoreFileRequest) (*StoreFileRet, error) {
 	event := &AntMes{
 		Target:       "*",
 		Function:     "sendBackEvent",
-		FileType:     "", //TODO
 		TargetedPath: req.Path,
 		UserName:     req.UserName,
-		Args:         []string{"TransferEvent", time.Now().Format("2006-01-02 15:04:05"), transfer.id, "Started"},
+		Args:         []string{"TransferEvent", time.Now().Format("2006-01-02 15:04:05"), transfer.id, "Started", fileType},
 	}
 	f.gnode.senderManager.sendMessage(event)
 	f.gnode.receiverManager.receiveMessage(event)
@@ -288,14 +296,13 @@ func (f *FileManager) commitFileStorage(mes *AntMes) error {
 		transfer := f.transferMap.get(mes.TransferId).(*FileTransfer)
 		transfer.timer.Stop()
 		f.transferMap.del(mes.TransferId)
-		args := []string{"TransferEvent", time.Now().Format("2006-01-02 15:04:05"), transfer.id, "Ended"}
+		args := []string{"TransferEvent", time.Now().Format("2006-01-02 15:04:05"), transfer.id, "Ended", transfer.fileType}
 		for _, meta := range transfer.metadata {
 			args = append(args, meta)
 		}
 		event := &AntMes{
 			Target:       "*",
 			Function:     "sendBackEvent",
-			FileType:     "", //TODO
 			TargetedPath: transfer.path,
 			UserName:     transfer.userName,
 			Args:         args,

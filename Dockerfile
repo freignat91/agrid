@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM alpine:3.4
 
 ENV GOPATH /go
 ENV PATH $PATH:/go/bin
@@ -22,7 +22,7 @@ RUN cd $GOPATH/src/github.com/freignat91/agrid && \
     rm -rf $GOPATH/src && \
     rm -rf /root/.glide
 
-HEALTHCHECK --interval=10s --timeout=10s --retries=80 CMD /go/bin/server healthcheck
+#HEALTHCHECK --interval=10s --timeout=10s --retries=80 CMD /go/bin/server healthcheck
 
 CMD ["/go/bin/server"]
  

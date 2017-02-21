@@ -165,7 +165,7 @@ func (m *ReceiverManager) startClientReader(stream GNodeService_GetClientStreamS
 		}
 		if mes.Function == "setEventListener" {
 			if m.gnode.checkUser(mes.UserName, mes.UserToken) {
-				m.gnode.setEventListener("TransferEvent", mes.UserName, clientName)
+				m.gnode.setEventListener(mes.Args[0], mes.Args[1], mes.UserName, clientName)
 			} else {
 				logf.error("setEventListener error user")
 				stream.Send(&AntMes{

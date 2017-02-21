@@ -17,12 +17,12 @@ type AFile struct {
 	meta      map[string]string
 }
 
-func (api *AgridAPI) CreateFile(name string, key string) (*AFile, error) {
+func (api *AgridAPI) CreateFile(name string, meta map[string]string, key string) (*AFile, error) {
 	af := AFile{}
 	af.key = key
 	af.api = api
 	af.name = name
-	af.meta = make(map[string]string)
+	af.meta = meta
 	af.isCreated = true
 	af.fname = fmt.Sprintf("/tmp/af%d", time.Now().UnixNano())
 	if file, err := os.Create(af.fname); err != nil {

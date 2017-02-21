@@ -103,6 +103,8 @@ func (g *gnodeLeader) getSelfAddr() error {
 }
 
 func (g *gnodeLeader) getCommonAddr() error {
+	log.Printf("wait to be ready")
+	time.Sleep(10 * time.Second)
 	ips, err := net.LookupIP("agrid")
 	if err != nil || len(ips) == 0 {
 		return fmt.Errorf("getCommonAddr error in lookipIP: %v", err)

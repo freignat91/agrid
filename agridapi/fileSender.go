@@ -74,6 +74,9 @@ func (m *fileSender) storeFile(fileName string, target string, meta []string, nb
 		m.api.info("No file %s version found, store version 1\n", target)
 		version = 1
 	}
+	if meta == nil {
+		meta = []string{}
+	}
 	for i, client := range m.clients {
 		nbBlock := totalBlock / int64(nbThread)
 		if totalBlock%int64(nbThread) >= int64(i+1) {

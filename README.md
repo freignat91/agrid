@@ -37,16 +37,21 @@ Agrid use Ant like behavior to found the shortest path between two nodes. The pa
 
 # Install
 
-Docker 1.12.5 min should be installed. Warning agrid doesn't work on Docker 1.13 for now. Update on going...
+Docker 1.12.5 min should be installed, better docker 1.13
+
 pull this image or rebuild it:
 
 - clone the git project: https://github.com/freignat91/agrid
 - execute make install to build the agrid command line executable
 - execute make build to create a image freignat91/agrid:latest
 
-agrid can't be used as a single container, it needs to be started as a service;
+agrid can't be used as a single container, it needs to be started as a service on a swarm machine (manager or worker),
+to create a swarm mamager on the local machine with a usable network execute:
+ - docker swarm init --advertise-addr 127.0.0.1
+ - docker network create -d overlay aNetwork
 
-For instance with 5 nodes, using a publish port 30103 and network aNetwork
+
+For instance with 5 nodes, using a publish port 30103 and the network "aNetwork"
 [dataPath] should exist on the host, it contains all the data saved by agrid
 
 ```
@@ -56,6 +61,8 @@ For instance with 5 nodes, using a publish port 30103 and network aNetwork
         --replicas=5 \
         freignat91/agrid:latest
 ```
+
+Agrid take more time to start than the "ready" docker status. Every agrid command executed before will be rejected with a message "Node  not yet ready"
 
 # Resilience
 
