@@ -32,7 +32,7 @@ Agrid use Ant like behavior to found the shortest path between two nodes. The pa
 - BUFFER_SIZE:            messages waiting to be treated buffer size: default 10000
 - PARALLEL_SENDER:        maximum number of messages to be sent treated in parallel: default 100
 - PARALLEL_RECEIVER:      maximum number of received messages treated in parallel: default 100
-- DATA_PATH:              path in container where file data is stored: default: /data (should be mapped on host using mount docker argument (--mount type=bind,source=/[hostpath],target=/data)
+- DATA_PATH:              path in container where file data is stored: default: /data, by default for debug reason mapped on host at /tmp/agrid/data
 
 
 # Install

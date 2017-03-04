@@ -83,9 +83,10 @@ update-deps:
 start:
 	@docker node inspect self > /dev/null 2>&1 || docker swarm inspect > /dev/null 2>&1 || (echo "> Initializing swarm" && docker swarm init --advertise-addr 127.0.0.1)
 	@docker network ls | grep aNetwork || (echo "> Creating overlay network 'aNetwork'" && docker network create -d overlay aNetwork)
+	@mkdir -p /tmp/agrid/data
 	@docker service create --network aNetwork --name agrid \
 	--publish 30103:30103 \
-	--mount type=bind,source=/home/freignat/data,target=/data \
+	--mount type=bind,source=/tmp/agrid/data,target=/data \
 	--replicas=3 \
 	$(IMAGE)
 
@@ -93,9 +94,10 @@ start:
 starttest:
 	@docker node inspect self > /dev/null 2>&1 || docker swarm inspect > /dev/null 2>&1 || (echo "> Initializing swarm" && docker swarm init --advertise-addr 127.0.0.1)
 	@docker network ls | grep aNetwork || (echo "> Creating overlay network 'aNetwork'" && docker network create -d overlay aNetwork)
+	@mkdir -p /tmp/agrid/data
 	@docker service create --network aNetwork --name agrid \
 	--publish 30103:30103 \
-	--mount type=bind,source=/home/freignat/data,target=/data \
+	--mount type=bind,source=/tmp/agrid/data,target=/data \
 	--replicas=3 \
 	$(IMAGETEST)
 
