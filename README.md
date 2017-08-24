@@ -4,17 +4,17 @@ Agrid v0.1.4
 
 # Purpose
 
-Agrid is a high available file storage service. Agrid can handle from 1 to several hundred storage nodes. Each file are cut and spread on nodes to be stored on high available way. Files can be saved with associated metadata and retrieve with their metadata.
+Agrid is a high available file storage service. Agrid can handle from 1 to several hundred storage nodes. Using command lines it's possible to store and retrieve files to/from this repository. Each file are cut and spread on nodes to be stored on high available way. a file piece is saved several time on distinct nodes. Files can be saved with associated metadata and retrieve with their metadata. File pieces are saved and retrieve in parallele way to speed up the transfer.
 
-Clients can use Command line interface (CLI) or Go API to store and retrieve files, the Go API allows also direct file manipulations create/open, read/write, seek, close, on the cluster
+Go API are also available to store and retrieve files and also allows direct records file manipulations create/open, read/write, seek, close, on the cluster
 
-Clients can monitor file transfers on a separated process
+File transfers are monitored on a separated process
 
-Agrid is a docker service. It enough to pull its image `freignat91/agrid:latest` or build it using `make build` and create the docker service to use it on a swarm cluster. It can be scaled using docker service scale command.
+Agrid is a docker service. It enough to pull its image `freignat91/agrid:latest` (or build it using `make build`) and create the docker service to use it on a swarm cluster. It can be scaled using docker service scale command.
 
-Agrid uses grpc protocol for communication between nodes and between nodes and clients. Under 20 nodes, all nodes are completely connected one to each other, up to 20 nodes Agrid create a grid and the communication between nodes are not direct anymore. 
+Agrid uses grpc protocol (HTTP2) for communication between nodes and between nodes and clients. Under 20 nodes, all nodes are completely connected one to each other, up to 20 nodes Agrid create a grid and the communication between nodes are not direct anymore.
 
-Agrid use Ant like behavior to found the shortest path between two nodes. The path are dynamically adapted regarding the nodes workload to stay the shortest in term of time. The grid become more efficient while it is used. see: 
+Agrid use Ant like behavior to found the shortest path between two nodes through the grid. The path are dynamically adapted regarding the nodes workload on the paths to stay the shortest in term of time. The grid become more efficient while it is used. see: 
 
 - ./docs/Agrid-grid-building.pptx
 - ./docs/Agrid-Ant-net.pptx
@@ -37,7 +37,7 @@ Agrid use Ant like behavior to found the shortest path between two nodes. The pa
 
 # Install
 
-Docker 1.12.5 min should be installed, better docker 1.13
+Docker 1.13 min should be installed min
 
 pull this image or rebuild it:
 
@@ -66,7 +66,7 @@ Agrid take more time to start than the "ready" docker status. Every agrid comman
 
 # Resilience
 
-For resilience reason, it's better to have a separated disk file system for each node (each node on its own VM), but for test reason it's possible to have several nodes on the same file system or have architecture with several nodes on several VMs, but the used mermory on file retrieve command will be higher than normal.
+For resilience reason, it's better to have a separated disk file system for each node (each node on its own VM), but for test reason it's possible to have several nodes on the same file system or have architecture with several nodes on several VMs, but the used memory on file retrieve command will be higher than normal.
 
 ## Node crash
 
