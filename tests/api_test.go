@@ -1,9 +1,10 @@
 package tests
 
 import (
-	"github.com/freignat91/agrid/agridapi"
 	"os"
 	"testing"
+
+	"github.com/freignat91/agrid/agridapi"
 )
 
 const (
@@ -20,7 +21,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestFileCreate(t *testing.T) {
-	file, err := api.CreateFile("/test/ee.txt", "")
+	file, err := api.CreateFile("/test/ee.txt", make(map[string]string), "")
 	if err != nil {
 		t.Fatalf("CreateFile error: %v\n", err)
 	}

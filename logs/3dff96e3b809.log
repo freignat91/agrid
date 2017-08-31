@@ -1,0 +1,112 @@
+agrid version: 0.1.4 build: e49b1f4b
+----------------------------------------------------------------------------
+Configuration:
+nb connect: auto
+rest_port: 3000
+grpc_port: 30103
+udp_port: 3010
+buffer_size: 10
+parallel_sender: 100
+parallel_receiver: 100
+----------------------------------------------------------------------------
+2017/08/31 14:40:29 Start REST API server on port 3000
+2017/08/31 14:40:29 gnode is listening on port :30103
+2017/08/31 14:40:32 wait to be ready
+2017/08/31 14:40:42 common IP: 10.0.1.2
+2017/08/31 14:40:42 SelfInterface addresses: [10.0.1.5/24 10.0.1.2/32]
+2017/08/31 14:40:42 Self IP: 10.0.1.5
+2017/08/31 14:40:42 Building grid
+2017/08/31 14:41:02 IPlist: [10.0.1.3 10.0.1.4 10.0.1.5]
+2017/08/31 14:41:02 Set dataPath: /data
+2017/08/31 14:41:02 NodeNamelist: [N010000001003 N010000001004 N010000001005]
+2017/08/31 14:41:02 Node index: 2
+2017/08/31 14:41:02 connecNodes nbLineConnect=0, nbCrossConnect=0
+2017/08/31 14:41:02 Create 3 nodes grid nbLibneConnect=0 nbCrossConnect=0
+2017/08/31 14:41:02 Make grid with nbNode=3 and nbLineConnect=2 nbCrossConnect=0
+connect 2
+Node 00:  01 02
+Node 01:  00 02
+Node 02:  00 01
+Create grid done
+2017/08/31 14:41:02 Connected to N010000001003 (65feb4568157)
+2017/08/31 14:41:02 Connected to N010000001004 (2ca6e1826f3c)
+2017/08/31 14:41:14 Client stream open: client-1504190474434921700-1
+2017/08/31 14:41:14 Client reader client-1504190474434921700-1: Failed to receive message: rpc error: code = Canceled desc = context canceled
+2017/08/31 14:41:14 removeEventListener clientId=client-1504190474434921700-1
+2017/08/31 14:41:22 ---------------------------------------------------------------------------------------
+2017/08/31 14:41:22 Node: N010000001005
+2017/08/31 14:41:22 Connected -> N010000001003 ip: 10.0.1.3 (65feb4568157)
+2017/08/31 14:41:22 Connected -> N010000001004 ip: 10.0.1.4 (2ca6e1826f3c)
+2017/08/31 14:41:22 ---------------------------------------------------------------------------------------
+2017/08/31 14:41:26 Client stream open: client-1504190486256294300-1
+2017/08/31 14:41:26 Client reader client-1504190486256294300-1: Failed to receive message: rpc error: code = Canceled desc = context canceled
+2017/08/31 14:41:26 removeEventListener clientId=client-1504190486256294300-1
+2017/08/31 14:47:46 Client stream open: client-1504190866086783600-1
+2017/08/31 14:47:46 storeFile received: req=client_id:"client-1504190866086783600-1" name:"/tmp/af1504190822348502282" path:"/test/ee.txt" nb_block_total:1 nb_block:1 blockSize:524288 transfer_id:"TF-7b7a10ee977da68bdf9ee3f3fa099704-1504190822-0" user_name:"common" version:1 
+2017/08/31 14:47:46 Received sendBackEvent: [TransferEvent 2017-08-31 14:47:46 TF-7b7a10ee977da68bdf9ee3f3fa099704-1504190822-0 Started ]
+2017/08/31 14:47:46 storeFileINodeInit error: open /data/tmp/common/test/ee.txt.1.2.!fg!/meta: permission denied
+2017/08/31 14:47:46 Error writting block order 1: open /data/tmp/common/test/ee.txt.1.2.!fg!/t.00001.1: permission denied
+2017/08/31 14:47:46 All store block ack received. File store tf=TF-7b7a10ee977da68bdf9ee3f3fa099704-1504190822-0 done
+2017/08/31 14:47:46 received commitFileStorage from client, tf=TF-7b7a10ee977da68bdf9ee3f3fa099704-1504190822-0
+2017/08/31 14:47:46 Received sendBackEvent: [TransferEvent 2017-08-31 14:47:46 TF-7b7a10ee977da68bdf9ee3f3fa099704-1504190822-0 Ended ]
+2017/08/31 14:47:46 Client reader client-1504190866086783600-1: Failed to receive message: rpc error: code = Canceled desc = context canceled
+2017/08/31 14:47:46 removeEventListener clientId=client-1504190866086783600-1
+2017/08/31 14:48:08 Received sendBackEvent: [TransferEvent 2017-08-31 14:48:08 TF-7b7a10ee977da68bdf9ee3f3fa099704-1504190844-0 Started ]
+2017/08/31 14:48:08 storeFileINodeInit error: open /data/tmp/common/test/ee.txt.1.2.!fg!/meta: permission denied
+2017/08/31 14:48:08 Error writting block order 1: open /data/tmp/common/test/ee.txt.1.2.!fg!/t.00001.1: permission denied
+2017/08/31 14:48:08 Received sendBackEvent: [TransferEvent 2017-08-31 14:48:08 TF-7b7a10ee977da68bdf9ee3f3fa099704-1504190844-0 Ended ]
+2017/08/31 14:48:08 received commitFileStorage from client, tf=TF-7b7a10ee977da68bdf9ee3f3fa099704-1504190844-0
+2017/08/31 14:48:08 Client stream open: client-1504190888668169300-1
+2017/08/31 14:48:08 Client reader client-1504190888668169300-1: Failed to receive message: rpc error: code = Canceled desc = context canceled
+2017/08/31 14:48:08 removeEventListener clientId=client-1504190888668169300-1
+2017/08/31 14:48:08 Send to client error: client client-1504190888636578800-1 doesn't exist mes=
+2017/08/31 14:48:37 Received sendBackEvent: [TransferEvent 2017-08-31 14:48:37 TF-1c4bfb7ee537bdaf2f7cc834829c6440-1504190873-0 Started ]
+2017/08/31 14:48:37 storeFileINodeInit error: open /data/tmp/common/test/test1KB.file.1.2.!fg!/meta: permission denied
+2017/08/31 14:48:37 Error writting block order 1: open /data/tmp/common/test/test1KB.file.1.2.!fg!/t.00001.1: permission denied
+2017/08/31 14:48:37 Received sendBackEvent: [TransferEvent 2017-08-31 14:48:37 TF-1c4bfb7ee537bdaf2f7cc834829c6440-1504190873-0 Ended ]
+2017/08/31 14:48:37 received commitFileStorage from client, tf=TF-1c4bfb7ee537bdaf2f7cc834829c6440-1504190873-0
+2017/08/31 14:48:37 Send to client error: client client-1504190917208470900-1 doesn't exist mes=
+2017/08/31 14:49:08 Client stream open: client-1504190948277985600-1
+2017/08/31 14:49:08 storeFile received: req=client_id:"client-1504190948277985600-1" name:"/tmp/af1504190904442256989" path:"/test/test1KB.file" nb_block_total:1 nb_block:1 blockSize:524288 transfer_id:"TF-1c4bfb7ee537bdaf2f7cc834829c6440-1504190904-0" user_name:"common" version:1 
+2017/08/31 14:49:08 Received sendBackEvent: [TransferEvent 2017-08-31 14:49:08 TF-1c4bfb7ee537bdaf2f7cc834829c6440-1504190904-0 Started ]
+2017/08/31 14:49:08 storeFileINodeInit error: open /data/tmp/common/test/test1KB.file.1.1.!fg!/meta: permission denied
+2017/08/31 14:49:08 Error writting block order 1: open /data/tmp/common/test/test1KB.file.1.1.!fg!/t.00001.1: permission denied
+2017/08/31 14:49:08 All store block ack received. File store tf=TF-1c4bfb7ee537bdaf2f7cc834829c6440-1504190904-0 done
+2017/08/31 14:49:08 received commitFileStorage from client, tf=TF-1c4bfb7ee537bdaf2f7cc834829c6440-1504190904-0
+2017/08/31 14:49:08 Received sendBackEvent: [TransferEvent 2017-08-31 14:49:08 TF-1c4bfb7ee537bdaf2f7cc834829c6440-1504190904-0 Ended ]
+2017/08/31 14:49:08 Client reader client-1504190948277985600-1: Failed to receive message: rpc error: code = Canceled desc = context canceled
+2017/08/31 14:49:08 removeEventListener clientId=client-1504190948277985600-1
+2017/08/31 14:49:37 Received sendBackEvent: [TransferEvent 2017-08-31 14:49:37 TF-2d95db3332935489835b9e39aa8e2331-1504190933-0 Started ]
+2017/08/31 14:49:37 storeFileINodeInit error: open /data/tmp/common/test/test1KB.file.1.1.!fg!/meta: permission denied
+2017/08/31 14:49:37 Error writting block order 1: open /data/tmp/common/test/test1KB.file.1.1.!fg!/t.00001.1: permission denied
+2017/08/31 14:49:37 Received sendBackEvent: [TransferEvent 2017-08-31 14:49:37 TF-2d95db3332935489835b9e39aa8e2331-1504190933-0 Ended ]
+2017/08/31 14:49:37 received commitFileStorage from client, tf=TF-2d95db3332935489835b9e39aa8e2331-1504190933-0
+2017/08/31 14:49:37 Client stream open: client-1504190977875557700-1
+2017/08/31 14:49:37 Send to client error: client client-1504190977846234300-1 doesn't exist mes=
+2017/08/31 14:49:37 Client reader client-1504190977875557700-1: Failed to receive message: rpc error: code = Canceled desc = context canceled
+2017/08/31 14:49:37 removeEventListener clientId=client-1504190977875557700-1
+2017/08/31 14:51:14 Received sendBackEvent: [TransferEvent 2017-08-31 14:51:14 TF-2d95db3332935489835b9e39aa8e2331-1504191030-0 Started ]
+2017/08/31 14:51:14 storeFileINodeInit error: open /data/tmp/common/test/test1KB.file.1.1.!fg!/meta: permission denied
+2017/08/31 14:51:14 Error writting block order 1: open /data/tmp/common/test/test1KB.file.1.1.!fg!/t.00001.1: permission denied
+2017/08/31 14:51:14 Received sendBackEvent: [TransferEvent 2017-08-31 14:51:14 TF-2d95db3332935489835b9e39aa8e2331-1504191030-0 Ended ]
+2017/08/31 14:51:14 received commitFileStorage from client, tf=TF-2d95db3332935489835b9e39aa8e2331-1504191030-0
+2017/08/31 14:51:14 Send to client error: client client-1504191074418260700-1 doesn't exist mes=
+2017/08/31 14:51:56 Client stream open: client-1504191116464760300-1
+2017/08/31 14:51:56 storeFile received: req=client_id:"client-1504191116464760300-1" name:"/tmp/af1504191072427463875" path:"/test/test1KB.file" nb_block_total:1 nb_block:1 blockSize:524288 transfer_id:"TF-1c4bfb7ee537bdaf2f7cc834829c6440-1504191072-0" user_name:"common" version:1 
+2017/08/31 14:51:56 Received sendBackEvent: [TransferEvent 2017-08-31 14:51:56 TF-1c4bfb7ee537bdaf2f7cc834829c6440-1504191072-0 Started ]
+2017/08/31 14:51:56 storeFileINodeInit error: open /data/tmp/common/test/test1KB.file.1.2.!fg!/meta: permission denied
+2017/08/31 14:51:56 Error writting block order 1: open /data/tmp/common/test/test1KB.file.1.2.!fg!/t.00001.1: permission denied
+2017/08/31 14:51:56 All store block ack received. File store tf=TF-1c4bfb7ee537bdaf2f7cc834829c6440-1504191072-0 done
+2017/08/31 14:51:56 received commitFileStorage from client, tf=TF-1c4bfb7ee537bdaf2f7cc834829c6440-1504191072-0
+2017/08/31 14:51:56 Received sendBackEvent: [TransferEvent 2017-08-31 14:51:56 TF-1c4bfb7ee537bdaf2f7cc834829c6440-1504191072-0 Ended ]
+2017/08/31 14:51:56 Client reader client-1504191116464760300-1: Failed to receive message: rpc error: code = Canceled desc = context canceled
+2017/08/31 14:51:56 removeEventListener clientId=client-1504191116464760300-1
+2017/08/31 14:52:49 Received sendBackEvent: [TransferEvent 2017-08-31 14:52:49 TF-7b7a10ee977da68bdf9ee3f3fa099704-1504191125-0 Started ]
+2017/08/31 14:52:49 storeFileINodeInit error: open /data/tmp/common/test/ee.txt.1.2.!fg!/meta: permission denied
+2017/08/31 14:52:49 Error writting block order 1: open /data/tmp/common/test/ee.txt.1.2.!fg!/t.00001.1: permission denied
+2017/08/31 14:52:49 Received sendBackEvent: [TransferEvent 2017-08-31 14:52:49 TF-7b7a10ee977da68bdf9ee3f3fa099704-1504191125-0 Ended ]
+2017/08/31 14:52:49 Client stream open: client-1504191169466061400-1
+2017/08/31 14:52:49 received commitFileStorage from client, tf=TF-7b7a10ee977da68bdf9ee3f3fa099704-1504191125-0
+2017/08/31 14:52:49 Client reader client-1504191169466061400-1: Failed to receive message: rpc error: code = Canceled desc = context canceled
+2017/08/31 14:52:49 removeEventListener clientId=client-1504191169466061400-1
+2017/08/31 14:52:49 Send to client error: client client-1504191169433399400-1 doesn't exist mes=

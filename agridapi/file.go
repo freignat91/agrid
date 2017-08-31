@@ -45,7 +45,7 @@ func (api *AgridAPI) OpenFile(name string, version int, key string) (*AFile, err
 	} else {
 		af.meta = meta
 	}
-	if file, err := os.OpenFile(af.fname, os.O_RDWR, 0666); err != nil {
+	if file, err := os.OpenFile(af.fname, os.O_RDWR, 0700); err != nil {
 		return nil, err
 	} else {
 		af.file = file

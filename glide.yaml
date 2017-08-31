@@ -1,9 +1,13 @@
 package: github.com/freignat91/agrid
 import:
+- package: github.com/fatih/color
+  version: ^1.5.0
 - package: github.com/golang/protobuf
   subpackages:
   - proto
+- package: github.com/spf13/cobra
+- package: golang.org/x/net
+  subpackages:
+  - context
 - package: google.golang.org/grpc
-  version: ^1.0.5
-- package: github.com/spf13/cobra  
-- package: github.com/fatih/color
+  version: ^1.6.0

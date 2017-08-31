@@ -230,10 +230,10 @@ func (f *FileManager) writeBlock(mes *AntMes) error {
 		logf.error("storeFileINodeInit error: %v\n", err)
 	}
 	dir := f.getGNodeFileTmpPath(mes.UserName, mes.TargetedPath, mes.Version, mes.Duplicate)
-	os.MkdirAll(dir, os.ModeDir)
+	os.MkdirAll(dir, 0700)
 	name := f.getBlockName(mes.Order, mes.NbBlockTotal)
 	//logf.info("writeblock: %s / %s\n", dir, name)
-	if err := ioutil.WriteFile(path.Join(dir, name), mes.Data, 0666); err != nil {
+	if err := ioutil.WriteFile(path.Join(dir, name), mes.Data, 0700); err != nil {
 		return err
 	}
 	return nil
@@ -245,7 +245,7 @@ func (f *FileManager) storeFileNodeInit(mes *AntMes) error {
 		return nil
 	}
 	//logf.info("storeFileNodeInit: %s\n", dir)
-	os.MkdirAll(dir, os.ModeDir)
+	os.MkdirAll(dir, 0700)
 	//dirParent := path.Dir(dir)
 	//name := path.Base(mes.TargetedPath)
 	filed, err := os.Create(path.Join(dir, "meta"))
@@ -314,7 +314,7 @@ func (f *FileManager) commitFileStorage(mes *AntMes) error {
 	for duplicate := 1; duplicate <= config.nbDuplicate; duplicate++ {
 		pathTmp := f.getGNodeFileTmpPath(mes.UserName, mes.TargetedPath, mes.Version, int32(duplicate))
 		pathUsers := f.getGNodeFileUsersPath(mes.UserName, mes.TargetedPath, mes.Version, int32(duplicate))
-		os.MkdirAll(path.Dir(pathUsers), os.ModeDir)
+		os.MkdirAll(path.Dir(pathUsers), 0700)
 		if _, err := os.Stat(pathTmp); err == nil {
 			if err := os.Rename(pathTmp, pathUsers); err != nil {
 				logf.error("com./w	mit error file=%s: %v\n", pathUsers, err)

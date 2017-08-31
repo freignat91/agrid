@@ -2,8 +2,6 @@ package gnode
 
 import (
 	"fmt"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 	"io/ioutil"
 	"math/rand"
 	"net"
@@ -11,6 +9,9 @@ import (
 	"path"
 	"sync"
 	"time"
+
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 //TODO: ramasse miette sur les objet transfer non terminé apres moult
@@ -102,8 +103,8 @@ func (g *GNode) Start(version string, build string) error {
 }
 
 func (g *GNode) init() {
-	os.MkdirAll(path.Join(config.rootDataPath, "users"), 0666)
-	os.MkdirAll(path.Join(config.rootDataPath, "tmp"), 0666)
+	os.MkdirAll(path.Join(config.rootDataPath, "users"), 0700)
+	os.MkdirAll(path.Join(config.rootDataPath, "tmp"), 0700)
 	g.lockId = sync.RWMutex{}
 	g.traceMap = make(map[string]*gnodeTrace)
 	//g.clientMap = make(map[string]*gnodeClient)
@@ -326,7 +327,7 @@ func (g *GNode) createUser(userName string, token string) error {
 		g.loadOneUser(userName)
 		return fmt.Errorf("User %s : already exist", userName)
 	}
-	os.MkdirAll(path.Join(config.rootDataPath, "users", userName), os.ModeDir)
+	os.MkdirAll(path.Join(config.rootDataPath, "users", userName), 0700)
 	file, errc := os.Create(path.Join(config.rootDataPath, "users", userName, "token"))
 	if errc != nil {
 		return errc
