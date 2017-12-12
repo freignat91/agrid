@@ -14,12 +14,12 @@ Agrid is a docker service. It enough to pull its image `freignat91/agrid:latest`
 
 Agrid uses grpc protocol (HTTP2) for communication between nodes and between nodes and clients. Under 20 nodes, all nodes are completely connected one to each other, up to 20 nodes Agrid create a grid and the communication between nodes are not direct anymore.
 
-Agrid use Ant like behavior to found the shortest path between two nodes through the grid. The path are dynamically adapted regarding the nodes workload on the paths to stay the shortest in term of time. The grid become more efficient while it is used. see: 
+Agrid use Ant like behavior to found the shortest path between two nodes through the grid. The path are dynamically adapted regarding the nodes workload on the paths to stay the shortest in term of time. The grid become more efficient while it is used. see:
 
 - ./docs/Agrid-grid-building.pptx
 - ./docs/Agrid-Ant-net.pptx
 
-
+.
 
 # Configuration using System Variables:
 
@@ -86,8 +86,8 @@ To simulate nodes connections using different parameters as, node number, line c
 
 `agrid grid simul [nodes] <--line xx > <--cross yy>`
 - [nodes] the number of nodes
-- <--line xx> optionally: xx the number of line connections 
-- <--cross yy> optionally: yy the number of cross connections 
+- <--line xx> optionally: xx the number of line connections
+- <--cross yy> optionally: yy the number of cross connections
 
 this command as not effect on the real cluster grid connections.see (./docs/Agrid-grid-building.pptx, ./docs/Agrid-Ant-net.pptx)
 
@@ -231,7 +231,7 @@ Arguments:
 - clusterPathName: pathname of the file on the cluster
 - metadata associated to the file and stored with the file
 - nbThread: number of threads used to store the file (each thread open a distinc grpc connection)
-- key: AES key to encrypt the file on the cluster 
+- key: AES key to encrypt the file on the cluster
 
 ### func (api *AgridAPI) FileRetrieve(clusterPathname string, localFile string, version int, nbThread int, key string) (map[string]string, int, error)
 
@@ -243,7 +243,7 @@ Arguments:
 - nbThread: number of threads used to store the file (each thread open a distinc grpc connection)
 - key: AES key to decrypt the file
 
-### func (api *AgridAPI) FileRm(clusterPathname string, version int, recursive bool) (error, bool) 
+### func (api *AgridAPI) FileRm(clusterPathname string, version int, recursive bool) (error, bool)
 
 Remove a file on the cluster
 Arguments:
@@ -251,7 +251,7 @@ Arguments:
 - recusive: if true remove all files under the clusterPathname
 - version: to remove a specifiv version, default: all versions are removed
 
-### func (api *AgridAPI) FileSetTransferEventCallback(fileType string, callbackFunction interface{}) error 
+### func (api *AgridAPI) FileSetTransferEventCallback(fileType string, callbackFunction interface{}) error
 
 Set a function callback executed at each TransferEvent
 Arguments:
